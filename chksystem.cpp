@@ -64,8 +64,8 @@ CheckpointSystem::load_network_params(std::string chkpt_name) {
 }
 
 void
-CheckpointSystem::chkpt_summary(std::string chkpt_name) {
-    _chkpts[chkpt_name]->summary();
+CheckpointSystem::chkpt_summary(std::string chkpt_name, int verbose) {
+    _chkpts[chkpt_name]->summary(verbose);
 }
 
 std::shared_ptr<PMemDNNCheckpoint>
@@ -78,4 +78,10 @@ CheckpointSystem::existing_chkpts() {
     std::vector<std::string> ret;
     std::for_each(_chkpts.begin(), _chkpts.end(), [&](auto&& item) { ret.push_back(item.first); });
     return ret;
+}
+
+byte_t* 
+CheckpointSystem::get_pmem_addr(std::string chkpt_name, std::string layer_name) {
+    auto chkpt = _chkpts[chkpt_name];
+    return chkpt->get_layer_data(layer_name);
 }

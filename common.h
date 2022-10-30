@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 #include <mutex>
+#include <sstream>
 
 #include <unistd.h>
 #include <signal.h>

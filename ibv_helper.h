@@ -174,5 +174,3 @@ int ibv_find_sgid_type(struct ibv_context *context, uint8_t port_num,
 
         return idx;
 }
-
-

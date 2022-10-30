@@ -11,7 +11,7 @@ public:
     virtual off64_t persist(PMemPool* pool) = 0;
     virtual void from_pmem(PMemPool* pool, off64_t offset) = 0;
     virtual const std::string& name() const = 0;
-    virtual void summary() const = 0;
+    virtual void summary(int verbose) const = 0;
 
 protected:
     off64_t this_offset;
@@ -24,7 +24,7 @@ public:
     off64_t persist(PMemPool* pool);
     void from_pmem(PMemPool* pool, off64_t offset);
     const std::string& name() const;
-    void summary() const;
+    void summary(int verbose=0) const;
 
     size_t size_in_bytes;
     off64_t data_offset;
@@ -58,7 +58,7 @@ public:
 
     const std::string& name() const;
     const size_t nlayers() const;
-    void summary() const;
+    void summary(int verbose=0) const;
 
 private:
     std::string _chkpt_name;

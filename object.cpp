@@ -36,7 +36,7 @@ const std::string& PMemDNNLayer::name() const {
 }
 
 void
-PMemDNNLayer::summary() const {
+PMemDNNLayer::summary(int verbose) const {
     printf("    layer object name: %s\n", layer_name.c_str());
     printf("    data size: %ld\n", size_in_bytes);
     printf("    data_offset: %ld\n", data_offset);
@@ -72,8 +72,8 @@ PMemDNNCheckpoint::load_params(PMemPool* pool) {
     for (int i = 0; i < _nlayers; i++) {
         off64_t layer_offset = obj_i64[i + 2];
         std::shared_ptr<DRAMDNNLayer> dram_layer(new DRAMDNNLayer());
-        dram_layer->pmem_data_addr = pool->get_obj(layer_offset);
         dram_layer->pmem_layer.from_pmem(pool, layer_offset);
+        dram_layer->pmem_data_addr = pool->get_obj(dram_layer->pmem_layer.data_offset);
         _nn_params[dram_layer->pmem_layer.layer_name] = dram_layer;
     }
 }
@@ -132,11 +132,19 @@ PMemDNNCheckpoint::nlayers() const {
 }
 
 void 
-PMemDNNCheckpoint::summary() const {
-    printf("====== chkpt Summary ======\n");
+PMemDNNCheckpoint::summary(int verbose) const {
+    printf("================== DNN Checkpoint Summary ==================\n");
     printf("chkpt name: %s, layers=%ld\n", _chkpt_name.c_str(), _nlayers);
     for (auto&& [layer_name, dram_layer] : _nn_params) {
         printf("  layer: %s\n", layer_name.c_str());
-        dram_layer->pmem_layer.summary();
+        dram_layer->pmem_layer.summary(verbose);
+        if (verbose > 1) {
+            float* ptr = reinterpret_cast<float*>(dram_layer->pmem_data_addr);
+            printf("    data: ");
+            for (int i = 0; i < dram_layer->pmem_layer.size_in_bytes/sizeof(float); i++) {
+                printf("%f ", ptr[i]);
+            }
+            printf("\n");            
+        }
     }
 }

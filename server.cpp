@@ -7,22 +7,12 @@
 #include <chrono>
 
 #define ACK_MSG "rdma_task completed"
-
-extern int debug;
-extern int debug_fast_path;
-
-#define DEBUG_LOG if (debug) printf
-#define DEBUG_LOG_FAST_PATH if (debug_fast_path) printf
-#define FDEBUG_LOG if (debug) fprintf
-#define FDEBUG_LOG_FAST_PATH if (debug_fast_path) sprintf
-#define SDEBUG_LOG if (debug) fprintf
-#define SDEBUG_LOG_FAST_PATH if (debug_fast_path) sprintf
+#define ERROR_EXIT(msg) do { std::cerr << msg; return -1; } while (0);
 
 static volatile int keep_running = 1;
+// extern int debug;
 
-int debug = 1;
-int debug_fast_path = 1;
-
+// int debug = 1;
 
 void sigint_handler(int dummy) {
     keep_running = 0;
@@ -34,10 +24,11 @@ public:
     CheckpointServer(user_params& params);
     ~CheckpointServer();
 
-    void checkpoint_step();
-    void init_chekcpoint_system();
+    int checkpoint_step();
+    int init_chekcpoint_system();
     int open_server_socket();
-    int sock_fd();
+
+    const int get_sock_fd() const;
 
 private:
     int _port;
@@ -63,7 +54,6 @@ CheckpointServer::CheckpointServer(user_params& params)
 
     _chksystem = std::shared_ptr<CheckpointSystem>(
         new CheckpointSystem(params.dax_device, params.pmem_size, params.init));
-    printf("pool start addr: %p\n", _chksystem->_pool.base_addr());
 };
 
 
@@ -86,19 +76,17 @@ CheckpointServer::open_server_socket() {
         .ai_socktype = SOCK_STREAM
     };
     char* service;
+    char err_info[256];
     int ret_val;
     int sockfd;
     int tmp_sockfd = -1;
 
     ret_val = asprintf(&service, "%d", _port);
-    if (ret_val < 0)
-        return -1;
-
     ret_val = getaddrinfo(NULL, service, &hints, &res);
     if (ret_val < 0) {
-        fprintf(stderr, "%s for port %d\n", gai_strerror(ret_val), _port);
+        sprintf(err_info, "%s for port %d\n", gai_strerror(ret_val), _port);
         free(service);
-        return -1;
+        ERROR_EXIT(err_info);
     }
 
     for (t = res; t; t = t->ai_next) {
@@ -117,49 +105,61 @@ CheckpointServer::open_server_socket() {
     freeaddrinfo(res);
     free(service);
     if (tmp_sockfd < 0) {
-        fprintf(stderr, "Couldn't listen to port %d\n", _port);
-        return -1;
+        sprintf(err_info, "Couldn't listen to port %d\n", _port);
+        ERROR_EXIT(err_info);
     }
     listen(tmp_sockfd, 1);
     _sockfd = accept(tmp_sockfd, NULL, 0);
     close(tmp_sockfd);
     if (_sockfd < 0) {
-        fprintf(stderr, "accept() failed\n");
-        return -1;
+        sprintf(err_info, "accept() failed\n");
+        ERROR_EXIT(err_info);
     }
-    printf("Connection accepted.\n");
+
     return _sockfd;
 }
 
 
-void
+int
 CheckpointServer::init_chekcpoint_system() {
-    int msg_size = 0;
-    recv(_sockfd, &msg_size, sizeof(msg_size), MSG_WAITALL);
-    std::string msg_str(msg_size, (char)0);
-    recv(_sockfd, &msg_str[0], msg_size, MSG_WAITALL);
-    std::stringstream ss(msg_str);
+    int msg_size = 0,  ret = 0;
+    // receive the size of DNN structure info
+    ret = recv(_sockfd, &msg_size, sizeof(msg_size), MSG_WAITALL);
+    if (ret != sizeof(int))
+        ERROR_EXIT("Failed to recv DNN structure info size\n");
 
-    // checkpoint name, nlayers
+    // receive the DNN structure info string
+    std::string msg_str(msg_size, (char)0);
+    ret = recv(_sockfd, &msg_str[0], msg_size, MSG_WAITALL);
+    if (ret != msg_size)
+        ERROR_EXIT("Failed to recv DNN structure info string\n");
+    
+
+    // parse the info string, and construct indexes on PMEM
+    std::stringstream ss(msg_str);
     std::string str_nlayers, chkpt_name;
     ss >> chkpt_name >> str_nlayers;
     int nlayers = std::stoi(str_nlayers);
     _chksystem->new_chkpt(chkpt_name, nlayers);
-    
+
     for (int i = 0; i < nlayers; i++) {
-        // layer_name, layer_size
+        // parse layer_name, layer_size  and desc_str
         std::string layer_name, str_layer_size, desc_str;
         ss >> layer_name >> str_layer_size >> desc_str;
-        printf("!!!! layer_name: %s, size: %s, desc: %s\n", layer_name.c_str(), str_layer_size.c_str(), desc_str.c_str());
         size_t layer_size = std::stol(str_layer_size);
+
+        // register layer
         _chksystem->register_network_layer(chkpt_name, layer_name, layer_size);
         byte_t* pmem_layer_buff = _chksystem->get_pmem_addr(chkpt_name, layer_name);
         memset(pmem_layer_buff, 0, layer_size);
 
+        // register RDMA buffer
         struct rdma_buffer *rdma_buff;
         rdma_buff = rdma_buffer_reg(_rdma_dev, pmem_layer_buff, layer_size);
+        if (!rdma_buff)
+            ERROR_EXIT("Cannot register RDMA buffer\n");
 
-
+        // construct the RDMA task struct
         std::shared_ptr<rdma_task_attr> layer_task(new rdma_task_attr);
         memset(&(*layer_task), 0, sizeof(rdma_task_attr));
         layer_task->remote_buf_desc_length   = sizeof("0102030405060708:01020304:01020304:0102:010203:1:0102030405060708090a0b0c0d0e0f10");
@@ -169,50 +169,57 @@ CheckpointServer::init_chekcpoint_system() {
         layer_task->wr_id                    = i;       // use the layer id to be wr_id
         memcpy(layer_task->remote_buf_desc_str, &(desc_str[0]), layer_task->remote_buf_desc_length);
 
+        // Add this task to task buffer
         _rdma_tasks.push_back(layer_task);
     }
+    printf("Network structure inited\n");
+    return 0;
 }
 
 
-void
+int
 CheckpointServer::checkpoint_step() {
-    printf(">>> checkpoint job starts\n");
+    char err_info[256];
+    printf("checkpoint step %d\n", _chkpt_idx++);
     for (auto&& rdma_task : _rdma_tasks) {
-        printf("@@ task attrs: %s %d %p", rdma_task->remote_buf_desc_str, rdma_task->remote_buf_desc_length, rdma_task->local_buf_rdma);
-        if (rdma_submit_task(&(*rdma_task)) )
-            throw std::runtime_error("Submit RDMA task failed\n");
+        if (rdma_submit_task(&(*rdma_task)) ){
+            sprintf(err_info, "Submit RDMA task failed\n");
+            ERROR_EXIT(err_info);
+        }
+        printf("task %d submitted\n", rdma_task->wr_id);
     }
 
      /* Completion queue polling loop */
-    DEBUG_LOG_FAST_PATH("Polling completion queue\n");
-    struct rdma_completion_event rdma_comp_ev[10];
+    std::vector<rdma_completion_event> rdma_comp_ev(_rdma_tasks.size());
     int    reported_ev  = 0;
     do {
-        reported_ev += rdma_poll_completions(_rdma_dev, &rdma_comp_ev[reported_ev], 10/*expected_comp_events-reported_ev*/);
+        reported_ev += rdma_poll_completions(_rdma_dev, &rdma_comp_ev[reported_ev], _rdma_tasks.size()/*expected_comp_events-reported_ev*/);
         //TODO - we can put sleep here
     } while (reported_ev < _rdma_tasks.size());
-    DEBUG_LOG_FAST_PATH("Finished polling\n");
 
     for (int i = 0; i < reported_ev; ++i) {
-        printf("%d\n", i);
-        if (rdma_comp_ev[i].status != IBV_WC_SUCCESS) {
-            fprintf(stderr, "FAILURE: status \"%s\" (%d) for wr_id %d\n",
+        if (rdma_comp_ev[i].status != (rdma_completion_status)IBV_WC_SUCCESS) {
+            sprintf(err_info, "FAILURE: status \"%s\" (%d) for wr_id %d\n",
                     ibv_wc_status_str((ibv_wc_status)rdma_comp_ev[i].status),
                     rdma_comp_ev[i].status, (int) rdma_comp_ev[i].wr_id);
-            throw std::runtime_error("nmsl\n");
+            ERROR_EXIT(err_info);
         }
+        printf("task %d received\n", rdma_comp_ev[i].wr_id);
     }
 
     // Sending ack-message to the client, confirming that RDMA read/write has been completet
-    if (write(_sockfd, ACK_MSG, sizeof(ACK_MSG)) != sizeof(ACK_MSG)) {
-        char err_info[] = "FAILURE: Couldn't send \"%c\" msg (errno=%d '%m')\n";
-        sprintf(err_info, ACK_MSG, errno);
-        throw std::runtime_error(std::string(err_info));
+    int ackmsg = 1;
+    if (write(_sockfd, &ackmsg, sizeof(ackmsg)) != sizeof(ackmsg)) {
+        sprintf(err_info, "FAILURE: Couldn't send \"%c\" msg (errno=%d '%m')\n", ACK_MSG, errno);
+        ERROR_EXIT(err_info);
     }
+
+    return 0;
 }
 
-int
-CheckpointServer::sock_fd() {
+
+const int
+CheckpointServer::get_sock_fd() const {
     return _sockfd;
 }
 
@@ -221,14 +228,27 @@ int main(int argc, char *argv[]) {
     user_params params;
     if (parse_command_line(argc, argv, &params))
         return 1;
-    printf("%s %s %d %d %d\n", params.dax_device.c_str(), params.hostaddr.c_str(), params.port, params.pmem_size, params.init);
+    
+    // Construct a checkpointing server
     CheckpointServer ser(params);
-    ser.open_server_socket();
-    ser.init_chekcpoint_system();
 
-    int req = 0;
+    // Open socket for connection
+    if (ser.open_server_socket() < 0) {
+        std::cerr << "Cannot open server socket\n";
+        return 1;
+    }
+
+    printf("Connection accepted.\n");
+
+    // Init checkpoint system
+    if (ser.init_chekcpoint_system() < 0) {
+        std::cerr << "Fail to initialize checkpointing system on " << params.dax_device << "\n";
+        return 1;
+    }
+
+    int req = 0, ret = 0;
     do {
-        recv(ser.sock_fd(), &req, sizeof(req), MSG_WAITALL);
+        recv(ser.get_sock_fd(), &req, sizeof(req), MSG_WAITALL);
         if (req == 1){
             using namespace std::chrono;
             auto t1 = high_resolution_clock::now();

@@ -32,7 +32,7 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
     /*Set defaults*/
     usr_par->hostaddr.assign("192.168.10.4");
     usr_par->dax_device.assign("/dev/dax0.0");
-    usr_par->pmem_size = (size_t)16*1024*1024*1024;
+    usr_par->pmem_size = (size_t)128*1024*1024*1024;
     usr_par->port = 12345;
     usr_par->init = true;
 

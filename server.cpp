@@ -4,6 +4,8 @@
 #include "khash.h"
 #include "utils.h"
 #include "gpu_direct_rdma_access.h"
+#include "tpool.h"
+#include "cqueue.h"
 #include <chrono>
 
 extern "C" {
@@ -23,7 +25,6 @@ static volatile int keep_running = 1;
 void sigint_handler(int dummy) {
     keep_running = 0;
 }
-
 
 class CheckpointServer {
 public:

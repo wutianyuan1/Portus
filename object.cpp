@@ -120,8 +120,9 @@ std::vector<std::pair<std::string, size_t> >
 PMemDNNCheckpoint::get_layers_info() {
     std::vector<std::pair<std::string, size_t> > ret;
     for (auto&& [layer_name, dram_layer] : _nn_params) {
-        
+        ret.push_back({layer_name, dram_layer->pmem_layer.size_in_bytes});
     }
+    return ret;
 }
 
 byte_t*

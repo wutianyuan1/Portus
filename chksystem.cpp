@@ -70,6 +70,7 @@ CheckpointSystem::chkpt_summary(std::string chkpt_name, int verbose) {
 
 std::shared_ptr<PMemDNNCheckpoint>
 CheckpointSystem::get_chkpt(std::string chkpt_name) {
+    _chkpts[chkpt_name]->load_params(&_pool);
     return _chkpts[chkpt_name];
 }
 

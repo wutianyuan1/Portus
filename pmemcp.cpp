@@ -23,28 +23,17 @@ static void usage(const char *argv0) {
 
 void copy_to_hdf5(std::shared_ptr<PMemDNNCheckpoint> chkpt, std::string out_fn) {
     H5::H5File file(out_fn, H5F_ACC_CREAT | H5F_ACC_RDWR);
-    std::cout << file.getFileName() << std::endl;
 
     H5::FloatType datatype(H5::PredType::NATIVE_FLOAT);
     datatype.setOrder(H5T_ORDER_LE);
+    H5::Group chkpt_group(file.createGroup(chkpt->name()));
 
-    H5::Group group_gridData(file.createGroup(chkpt->name()));
-
-    /* Set points. */
-    for (int i = 0; i < chkpt->nlayers(); i++) {
-        hsize_t dims[] = {};
-        H5::DataSpace dataSpace(2, dims);
-        H5::DataSet dataSet(H5::createDataSet("points", datatype, dataSpace));
-
-        float dataSet_raw[N1][N2];
-
-        for (int i=0; i<N1; ++i) {
-            for (int j=0; j<N2; ++j) {
-                dataSet_raw[i][j] = i+j;
-            }
-        }
-
-        dataSet.write(dataSet_raw, datatype);
+    /* write layers to HDF5 file */
+    for (auto&& [layer_name, layer_size] : chkpt->get_layers_info()) {
+        hsize_t dims = layer_size / sizeof(float);
+        H5::DataSpace dataSpace(1, &dims);
+        H5::DataSet dataSet(chkpt_group.createDataSet(layer_name, datatype, dataSpace));
+        dataSet.write(chkpt->get_layer_data(layer_name), datatype);
         dataSpace.close();
         dataSet.close();
     }

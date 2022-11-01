@@ -6,7 +6,7 @@ off64_t
 PMemDNNLayer::persist(PMemPool* pool) {
     // [this_size, data_size_in_bytes, data_offset, name]
     size_t space_needed = sizeof(uint64_t) + (layer_name.size() + 1) + sizeof(size_in_bytes) + sizeof(data_offset);
-    std::tie(this_offset, this_ptr) = pool->alloc(size_in_bytes);
+    std::tie(this_offset, this_ptr) = pool->alloc(space_needed);
     memset(this_ptr, 0, space_needed);
     off64_t* pmem_ptr_i64 = reinterpret_cast<off64_t*>(this_ptr);
     _mm_mfence();

@@ -884,7 +884,6 @@ clean_rdma_dev:
 }
 
 //===========================================================================================
-static
 int rdma_exec_task(struct rdma_exec_params *exec_params) 
 {
 	int ret_val;
@@ -1334,6 +1333,86 @@ static int buff_size_validation(struct rdma_task_attr *attr, unsigned long rem_b
                 rem_buf_size, attr->local_buf_rdma->buf_size);
     }
     return 0;
+}
+
+//============================================================================================
+struct rdma_exec_params* rdma_get_exec_params(struct rdma_task_attr *attr)
+{
+	struct rdma_exec_params* exec_params = malloc(sizeof(struct rdma_exec_params));
+    memset(exec_params, 0, sizeof(struct rdma_exec_params));
+	uint16_t                rem_lid = 0;
+	int                     is_global = 0;
+    union ibv_gid           rem_gid;
+    int                     ret_val;
+
+    
+	exec_params->wr_id = attr->wr_id;
+	exec_params->device = attr->local_buf_rdma->rdma_dev;
+	exec_params->flags = attr->flags;
+	exec_params->local_buf_mr_lkey = (uint32_t)attr->local_buf_rdma->mr->lkey;
+	exec_params->local_buf_addr = attr->local_buf_rdma->buf_addr;
+	exec_params->local_buf_iovec = attr->local_buf_iovec;
+	exec_params->local_buf_iovcnt = attr->local_buf_iovcnt;
+	/*
+	 * Parse desc string, extracting remote buffer address, size, rkey, lid, dctn, and if global is true, also gid
+	 */
+	DEBUG_LOG_FAST_PATH("Starting to parse desc string: \"%s\"\n", attr->remote_buf_desc_str);
+	/*   addr             size     rkey     lid  dctn   g gid                                              
+	 *  "0102030405060708:01020304:01020304:0102:010203:1:0102030405060708090a0b0c0d0e0f10"*/
+	sscanf(attr->remote_buf_desc_str, "%llx:%lx:%lx:%hx:%lx:%d",
+			&(exec_params->rem_buf_addr), &(exec_params->rem_buf_size),
+		       	&(exec_params->rem_buf_rkey), &rem_lid,
+			&(exec_params->rem_dctn), &is_global);
+	memset(&rem_gid, 0, sizeof(rem_gid));
+	if (is_global) {
+		wire_gid_to_gid(attr->remote_buf_desc_str + sizeof "0102030405060708:01020304:01020304:0102:010203:1", &rem_gid);
+	}
+	DEBUG_LOG_FAST_PATH("rem_buf_addr=0x%llx, rem_buf_size=%u, rem_buf_offset=%u, rem_buf_rkey=0x%lx, rem_lid=0x%hx, rem_dctn=0x%lx, is_global=%d\n",
+			exec_params->rem_buf_addr, exec_params->rem_buf_size, attr->remote_buf_offset, exec_params->rem_buf_rkey, rem_lid, exec_params->rem_dctn, is_global);
+       	DEBUG_LOG_FAST_PATH("Rem GID: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
+                        rem_gid.raw[0],  rem_gid.raw[1],  rem_gid.raw[2],  rem_gid.raw[3],
+                        rem_gid.raw[4],  rem_gid.raw[5],  rem_gid.raw[6],  rem_gid.raw[7], 
+                        rem_gid.raw[8],  rem_gid.raw[9],  rem_gid.raw[10], rem_gid.raw[11],
+                        rem_gid.raw[12], rem_gid.raw[13], rem_gid.raw[14], rem_gid.raw[15] );
+	DEBUG_LOG_FAST_PATH("rdma_task_attr_flags=%08x\n", exec_params->flags);
+
+	/* upadte the remote buffer addr and size acording to the requested start offset */
+	exec_params->rem_buf_addr += attr->remote_buf_offset;
+	exec_params->rem_buf_size -= attr->remote_buf_offset;
+
+	/*
+	 * Pass attr->local_buf_iovec - local_buf_iovcnt elements and check that
+	 * the sum of local_buf_iovec[i].iov_len doesn't exceed rem_buf_size
+	 */
+	if (debug_fast_path) {
+		/* We do these validation code in debug mode only, because if something
+		 * is wrong in the fast path, the HW will give completion error */
+		ret_val = buff_size_validation(attr, exec_params->rem_buf_size);
+		if (ret_val) {
+			return NULL;
+		}
+	}
+    
+    /* Check if address handler corresponding to the given key is present in the hash table,
+       if yes - return it and if it is not, create ah and add it to the hash table */
+    struct ibv_ah_attr  ah_attr;
+
+    memset(&ah_attr, 0, sizeof ah_attr);
+    ah_attr.is_global   = is_global;
+    ah_attr.dlid        = rem_lid;
+    ah_attr.port_num    = exec_params->device->ib_port;
+    
+    if (ah_attr.is_global) {
+        ah_attr.grh.hop_limit = 1;
+        ah_attr.grh.dgid = rem_gid;
+        ah_attr.grh.sgid_index = exec_params->device->gidx;
+        ah_attr.grh.traffic_class = TC_PRIO << 5; // <<3 for dscp2prio, <<2 for ECN bits
+    }
+
+    if (rdma_create_ah_cached(exec_params->device, &ah_attr, &(exec_params->ah))) {
+        return NULL;
+    }
+    return exec_params;
 }
 
 //============================================================================================

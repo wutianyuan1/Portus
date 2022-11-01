@@ -55,6 +55,7 @@ public:
 
     void register_layer(std::string layer_name, size_t size_in_bytes, PMemPool* pool);
     byte_t* get_layer_data(std::string layer_name);
+    std::vector<std::pair<std::string, size_t> > get_layers_info();
 
     const std::string& name() const;
     const size_t nlayers() const;

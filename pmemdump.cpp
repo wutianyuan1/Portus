@@ -1,7 +1,7 @@
 #include "chksystem.h"
 
 
-void usage(const char *argv0) {
+static void usage(const char *argv0) {
     printf("Usage:\n");
     printf("  %s            Dump the checkpoints from a DAX device managed by GPU-RPMA\n", argv0);
     printf("\n");

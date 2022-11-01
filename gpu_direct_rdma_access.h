@@ -56,6 +56,11 @@ struct rdma_device;
  */
 struct rdma_buffer;
 
+/*
+ * rdma_exec_params is parameters for directly calling rdma_exec_task
+ */
+struct rdma_exec_params;
+
 struct rdma_open_dev_attr {
     const char      *ib_devname;
     int             ib_port;
@@ -136,6 +141,8 @@ int rdma_buffer_get_desc_str(struct rdma_buffer *rdma_buff, char *desc_str, size
  * returns: 0 on success, or the value of errno on failure
  */
 int rdma_submit_task(struct rdma_task_attr *attr);
+struct rdma_exec_params* rdma_get_exec_params(struct rdma_task_attr *attr);
+int rdma_exec_task(struct rdma_exec_params *exec_params);
 
 enum rdma_completion_status {
 	RDMA_STATUS_SUCCESS,

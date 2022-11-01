@@ -6,6 +6,12 @@
 #include "gpu_direct_rdma_access.h"
 #include <chrono>
 
+extern "C" {
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+}
+
 #define ACK_MSG "rdma_task completed"
 #define ERROR_EXIT(msg) do { std::cerr << msg; return -1; } while (0);
 
@@ -37,6 +43,7 @@ private:
     struct rdma_device* _rdma_dev;
     std::shared_ptr<CheckpointSystem> _chksystem;
     std::vector<std::shared_ptr<rdma_task_attr> > _rdma_tasks;
+    std::vector<rdma_exec_params*> _exec_tasks;
 };
 
 
@@ -169,9 +176,11 @@ CheckpointServer::init_chekcpoint_system() {
         layer_task->flags                    = 0x1;     // RDMA read
         layer_task->wr_id                    = i;       // use the layer id to be wr_id
         memcpy(layer_task->remote_buf_desc_str, &(desc_str[0]), layer_task->remote_buf_desc_length);
+        rdma_exec_params* exec_task_params = rdma_get_exec_params(&(*layer_task));
 
         // Add this task to task buffer
         _rdma_tasks.push_back(layer_task);
+        _exec_tasks.push_back(exec_task_params);
     }
     printf("Network structure inited\n");
     return 0;
@@ -182,20 +191,20 @@ int
 CheckpointServer::checkpoint_step() {
     char err_info[256];
     printf("checkpoint step %d\n", _chkpt_idx++);
-    for (auto&& rdma_task : _rdma_tasks) {
-        if (rdma_submit_task(&(*rdma_task)) ){
+    for (auto&& task : _exec_tasks) {
+        if (rdma_exec_task(task) ){
             sprintf(err_info, "Submit RDMA task failed\n");
             ERROR_EXIT(err_info);
         }
     }
 
      /* Completion queue polling loop */
-    std::vector<rdma_completion_event> rdma_comp_ev(_rdma_tasks.size());
+    std::vector<rdma_completion_event> rdma_comp_ev(_exec_tasks.size());
     int    reported_ev  = 0;
     do {
-        reported_ev += rdma_poll_completions(_rdma_dev, &rdma_comp_ev[reported_ev], _rdma_tasks.size()/*expected_comp_events-reported_ev*/);
+        reported_ev += rdma_poll_completions(_rdma_dev, &rdma_comp_ev[reported_ev], _exec_tasks.size()/*expected_comp_events-reported_ev*/);
         //TODO - we can put sleep here
-    } while (reported_ev < _rdma_tasks.size());
+    } while (reported_ev < _exec_tasks.size());
 
     for (int i = 0; i < reported_ev; ++i) {
         if (rdma_comp_ev[i].status != (rdma_completion_status)IBV_WC_SUCCESS) {
@@ -245,6 +254,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    int one = 1;
+   
+    setsockopt(ser.get_sock_fd(), IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
     int req = 0, ret = 0;
     do {
         recv(ser.get_sock_fd(), &req, sizeof(req), MSG_WAITALL);
@@ -253,7 +265,7 @@ int main(int argc, char *argv[]) {
             auto t1 = high_resolution_clock::now();
             ser.checkpoint_step();
             auto t2 = high_resolution_clock::now();
-            std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
+            std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
         }
             
         else break;

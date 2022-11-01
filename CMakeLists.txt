@@ -10,10 +10,16 @@ set(CMAKE_C_FLAGS "-O2")
 
 set(RDMA_LIB_SOURCES gpu_direct_rdma_access.c utils.c)
 set(PMEMDUMP_SOURCES pool.cpp object.cpp chksystem.cpp pmemdump.cpp)
+set(PMEMCP_SOURCES pool.cpp object.cpp chksystem.cpp pmemcp.cpp)
 set(SERVER_SOURCES pool.cpp object.cpp chksystem.cpp server.cpp)
 
 add_library(gpu_rdma SHARED ${RDMA_LIB_SOURCES})
 target_link_libraries(gpu_rdma rdmacm ibverbs mlx5)
+
 add_executable(pmemdump ${PMEMDUMP_SOURCES})
+
+add_executable(pmemcp ${PMEMCP_SOURCES})
+target_link_libraries(pmemcp hdf5 hdf5_cpp)
+
 add_executable(server ${SERVER_SOURCES})
 target_link_libraries(server gpu_rdma rdmacm ibverbs mlx5)

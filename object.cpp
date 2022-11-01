@@ -116,6 +116,14 @@ PMemDNNCheckpoint::persist(PMemPool* pool) {
     return this_offset;
 }
 
+std::vector<std::pair<std::string, size_t> >
+PMemDNNCheckpoint::get_layers_info() {
+    std::vector<std::pair<std::string, size_t> > ret;
+    for (auto&& [layer_name, dram_layer] : _nn_params) {
+        
+    }
+}
+
 byte_t*
 PMemDNNCheckpoint::get_layer_data(std::string layer_name) {
     return _nn_params[layer_name]->pmem_data_addr;

@@ -140,6 +140,7 @@ CheckpointServer::init_chekcpoint_system() {
     std::string str_nlayers, chkpt_name;
     ss >> chkpt_name >> str_nlayers;
     int nlayers = std::stoi(str_nlayers);
+    printf("New checkpoint! name=%s, layers=%d\n", chkpt_name.c_str(), nlayers);
     _chksystem->new_chkpt(chkpt_name, nlayers);
 
     for (int i = 0; i < nlayers; i++) {
@@ -186,7 +187,6 @@ CheckpointServer::checkpoint_step() {
             sprintf(err_info, "Submit RDMA task failed\n");
             ERROR_EXIT(err_info);
         }
-        printf("task %d submitted\n", rdma_task->wr_id);
     }
 
      /* Completion queue polling loop */
@@ -204,7 +204,6 @@ CheckpointServer::checkpoint_step() {
                     rdma_comp_ev[i].status, (int) rdma_comp_ev[i].wr_id);
             ERROR_EXIT(err_info);
         }
-        printf("task %d received\n", rdma_comp_ev[i].wr_id);
     }
 
     // Sending ack-message to the client, confirming that RDMA read/write has been completet

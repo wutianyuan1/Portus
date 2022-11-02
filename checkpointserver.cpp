@@ -64,6 +64,9 @@ CheckpointServer::init_chekcpoint_system() {
         _rdma_tasks.push_back(layer_task);
         _exec_tasks.push_back(exec_task_params);
     }
+    int ackmsg = TASK_FINISH_MSG;
+    if (write(_sockfd, &ackmsg, sizeof(int)) != sizeof(int))
+        ERROR_EXIT("Cannot send finish message\n");
     printf("Network structure inited\n");
     return 0;
 }
@@ -97,7 +100,7 @@ CheckpointServer::checkpoint_step() {
     }
 
     // Sending ack-message to the client, confirming that RDMA read/write has been completet
-    int ackmsg = 1;
+    int ackmsg = TASK_FINISH_MSG;
     if (write(_sockfd, &ackmsg, sizeof(ackmsg)) != sizeof(ackmsg)) {
         sprintf(err_info, "FAILURE: Couldn't send \"%c\" msg (errno=%d '%m')\n", ACK_MSG, errno);
         ERROR_EXIT(err_info);

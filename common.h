@@ -22,9 +22,10 @@
 #include <arpa/inet.h>
 #include <x86intrin.h>
 
-#define ALLOC_TABLE_SIZE (2*1024*1024)
-#define CHKPT_TABLE_SIZE (2*1024*1024)
-#define CACHELINE_SIZE 64
+#define ALLOC_TABLE_SIZE    (2*1024*1024)
+#define CHKPT_TABLE_SIZE    (2*1024*1024)
+#define CACHELINE_SIZE      64
+#define TASK_FINISH_MSG     1
 using byte_t = char;
 
 

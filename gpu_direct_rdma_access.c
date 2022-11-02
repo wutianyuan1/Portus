@@ -63,8 +63,8 @@ int debug_fast_path = 0;
 #define FDEBUG_LOG if (debug) fprintf
 #define FDEBUG_LOG_FAST_PATH if (debug_fast_path) fprintf
 
-#define CQ_DEPTH        640
-#define SEND_Q_DEPTH    640 
+#define CQ_DEPTH        8192
+#define SEND_Q_DEPTH    8192
 #define DC_KEY          0xffeeddcc  /*this is defined for both sides: client and server*/
 #define COMP_ARRAY_SIZE 16
 #define TC_PRIO         3

@@ -9,6 +9,7 @@ struct user_params {
     size_t pmem_size;
     int port;
     bool init;
+    int worker;
 };
 
 
@@ -23,6 +24,7 @@ usage(const char *argv0) {
     printf("  -p, --port=<port>         listen on/connect to port <port> (default 18515)\n");
     printf("  -s, --size=<size>         size of mapped region of the PMEM in MB (default 16GB)\n");
     printf("  -i, --init=<0/1>          whether to clean-up the PMEM device and init a new FS on it\n");
+    printf("  -w, --worker=<num>        multithread worker num\n");
 }
 
 
@@ -35,6 +37,7 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
     usr_par->pmem_size = (size_t)128*1024*1024*1024;
     usr_par->port = 12345;
     usr_par->init = true;
+    usr_par->worker = 4;
 
     while (1) {
         int c;
@@ -45,10 +48,11 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
             { .name = "port", .has_arg = 1, .val = 'p' },
             { .name = "size", .has_arg = 1, .val = 's' },
             { .name = "init", .has_arg = 1, .val = 'i' },
+            { .name = "worker", .has_arg = 1, .val = 'w'},
             { 0 }
         };
 
-        c = getopt_long(argc, argv, "d:a:p:s:i:",
+        c = getopt_long(argc, argv, "d:a:p:s:i:w:",
                         long_options, NULL);
         
         if (c == -1)
@@ -79,6 +83,10 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
             usr_par->init = strtol(optarg, NULL, 0);
             break;
 
+        case 'w':
+            usr_par->worker = strtol(optarg, NULL, 0);
+            break;
+            
         default:
             usage(argv[0]);
             return 1;

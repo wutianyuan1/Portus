@@ -8,6 +8,9 @@
 #include "cqueue.h"
 #include "checkpointserver.h"
 #include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 extern "C" {
 #include <sys/types.h>
@@ -24,15 +27,14 @@ static volatile int keep_running = 1;
 
 // int debug = 1;
 
-const int workers = 8;
-//TODO argument pass
-
 void sigint_handler(int dummy) {
     keep_running = 0;
 }
 
-void workerThread(user_params params, std::shared_ptr<ConcurrentQueue<int>> q, std::shared_ptr<CheckpointSystem> chksystem) {
-    std::cout << "Worker init\n";
+void workerThread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<int>> q, std::shared_ptr<CheckpointSystem> chksystem) {
+    std::stringstream thread_prefix;
+    thread_prefix << "[Thread " << std::setw(2) << tid << "]";
+    std::cout << thread_prefix.str() << " Worker init\n";
     while (true) {
         int client_fd;
         q->pop(client_fd);
@@ -41,7 +43,7 @@ void workerThread(user_params params, std::shared_ptr<ConcurrentQueue<int>> q, s
             std::cout << "Bye!\n";
             return;
         }
-        std::cout << "Connected!\n";
+        std::cout << thread_prefix.str() <<" Get connection\n";
         CheckpointServer chkserver(params.hostaddr, client_fd, chksystem);
         
         // Init checkpoint system
@@ -118,19 +120,20 @@ int open_server_socket(int _port) {
 
 int main(int argc, char *argv[]) {
     char err_info[256];
-
-    ThreadPool pool(workers);
+    
     user_params params;
     if (parse_command_line(argc, argv, &params))
         return 1;
+
+    ThreadPool pool(params.worker);
 
     auto q = std::make_shared<ConcurrentQueue<int>>();
     auto chksystem = std::shared_ptr<CheckpointSystem>(
         new CheckpointSystem(params.dax_device, params.pmem_size, params.init));
 
-    for (int i = 0; i < workers; i++) {
-        pool.enqueue([&, params=params] {
-            workerThread(params, q, chksystem);
+    for (int i = 0; i < params.worker; i++) {
+        pool.enqueue([&, params=params, i=i] {
+            workerThread(i, params, q, chksystem);
         });
     }
 
@@ -152,7 +155,7 @@ int main(int argc, char *argv[]) {
 CLEANUP:
 
     // Make all thread return
-    for (int i = 0; i < workers; i++) {
+    for (int i = 0; i < params.worker; i++) {
         q->push(-1);
     }
 }

@@ -59,10 +59,10 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
             recv(client_fd, &req, sizeof(req), MSG_WAITALL);
             if (req == 1){
                 using namespace std::chrono;
-                auto t1 = high_resolution_clock::now();
+                // auto t1 = high_resolution_clock::now();
                 chkserver.checkpoint();
-                auto t2 = high_resolution_clock::now();
-                std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
+                // auto t2 = high_resolution_clock::now();
+                // std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
             }
                 
             else break;

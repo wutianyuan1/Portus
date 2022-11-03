@@ -59,6 +59,7 @@
         "set": "cpp",
         "iomanip": "cpp",
         "cfenv": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "future": "cpp"
     }
 }

@@ -1,7 +1,7 @@
 #include "checkpointserver.h"
 
 CheckpointServer::CheckpointServer(std::string host, int sockfd, std::shared_ptr<CheckpointSystem> chksystem)
-: _sockfd(sockfd), _chksystem(chksystem), _job_type(job_type::gpu_to_pmem) {
+: _chkpt_idx(0), _sockfd(sockfd), _job_type(job_type::gpu_to_pmem), _chksystem(chksystem) {
     struct sockaddr hostaddr;
     get_addr((char*)host.c_str(), (struct sockaddr *)&hostaddr);
     _rdma_dev = rdma_open_device_server(&hostaddr);
@@ -76,7 +76,7 @@ CheckpointServer::init_chekcpoint_system() {
 int
 CheckpointServer::rdma_step() {
     char err_info[256];
-    printf("checkpoint step %d, job type %d\n", _chkpt_idx++, int(_job_type));
+    // printf("checkpoint step %d, job type %d\n", _chkpt_idx++, int(_job_type));
     for (auto&& task : _exec_tasks) {
         if (rdma_exec_task(task) ){
             sprintf(err_info, "Submit RDMA task failed\n");

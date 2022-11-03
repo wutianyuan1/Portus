@@ -30,7 +30,7 @@ void sigint_handler(int dummy) {
     keep_running = 0;
 }
 
-void workerThread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<int>> q, std::shared_ptr<CheckpointSystem> chksystem) {
+void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<int>> q, std::shared_ptr<CheckpointSystem> chksystem) {
     std::stringstream thread_prefix;
     thread_prefix << "[Thread " << std::setw(2) << tid << "]";
     std::cout << thread_prefix.str() << " Worker init\n";
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < params.worker; i++) {
         pool.enqueue([&, params=params, i=i] {
-            workerThread(i, params, q, chksystem);
+            worker_thread(i, params, q, chksystem);
         });
     }
 

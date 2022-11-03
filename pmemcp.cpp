@@ -31,11 +31,11 @@ void copy_to_hdf5(std::shared_ptr<PMemDNNCheckpoint> chkpt, std::string out_fn) 
     /* write layers to HDF5 file */
     for (auto&& [layer_name, layer_size] : chkpt->get_layers_info()) {
         hsize_t dims = layer_size / sizeof(float);
-        H5::DataSpace dataSpace(1, &dims);
-        H5::DataSet dataSet(chkpt_group.createDataSet(layer_name, datatype, dataSpace));
-        dataSet.write(chkpt->get_layer_data(layer_name), datatype);
-        dataSpace.close();
-        dataSet.close();
+        H5::DataSpace data_space(1, &dims);
+        H5::DataSet dataset(chkpt_group.createDataSet(layer_name, datatype, data_space));
+        dataset.write(chkpt->get_layer_data(layer_name), datatype);
+        data_space.close();
+        dataset.close();
     }
     file.close();
 }

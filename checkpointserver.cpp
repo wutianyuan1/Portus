@@ -9,6 +9,39 @@ CheckpointServer::CheckpointServer(std::string host, int sockfd, std::shared_ptr
         throw std::runtime_error("Cannot open RDMA device\n");
 }
 
+CheckpointServer::~CheckpointServer(){
+    close(_sockfd);
+    for (auto&& task : _rdma_tasks) {
+        rdma_buffer_dereg(task->local_buf_rdma);
+        delete[] task->remote_buf_desc_str;
+    }
+    rdma_close_device(_rdma_dev);
+}
+
+int
+CheckpointServer::add_rdma_task(byte_t* pmem_layer_buff, size_t layer_size, int wr_id, std::string desc_str) {
+    // register RDMA buffer
+    struct rdma_buffer *rdma_buff;
+    rdma_buff = rdma_buffer_reg(_rdma_dev, pmem_layer_buff, layer_size);
+    if (!rdma_buff)
+        ERROR_EXIT("Cannot register RDMA buffer\n");
+
+    // construct the RDMA task struct
+    std::shared_ptr<rdma_task_attr> layer_task(new rdma_task_attr);
+    memset(&(*layer_task), 0, sizeof(rdma_task_attr));
+    layer_task->remote_buf_desc_length   = sizeof("0102030405060708:01020304:01020304:0102:010203:1:0102030405060708090a0b0c0d0e0f10");
+    layer_task->remote_buf_desc_str      = new char[layer_task->remote_buf_desc_length];
+    layer_task->local_buf_rdma           = rdma_buff;
+    layer_task->flags                    = uint32_t(_job_type);     // RDMA read
+    layer_task->wr_id                    = wr_id;       // use the layer id to be wr_id
+    memcpy(layer_task->remote_buf_desc_str, &(desc_str[0]), layer_task->remote_buf_desc_length);
+    rdma_exec_params* exec_task_params = rdma_get_exec_params(&(*layer_task));
+
+    // Add this task to task buffer
+    _rdma_tasks.push_back(layer_task);
+    _exec_tasks.push_back(exec_task_params);
+    return 0;
+}
 
 int
 CheckpointServer::init_chekcpoint_system() {
@@ -30,42 +63,52 @@ CheckpointServer::init_chekcpoint_system() {
     std::string str_nlayers, chkpt_name;
     ss >> chkpt_name >> str_nlayers;
     int nlayers = std::stoi(str_nlayers);
-    printf("New checkpoint! name=%s, layers=%d\n", chkpt_name.c_str(), nlayers);
-    _chksystem->new_chkpt(chkpt_name, nlayers);
+    int ackmsg = 0;
 
-    for (int i = 0; i < nlayers; i++) {
-        // parse layer_name, layer_size  and desc_str
-        std::string layer_name, str_layer_size, desc_str;
-        ss >> layer_name >> str_layer_size >> desc_str;
-        size_t layer_size = std::stol(str_layer_size);
+    // check if the checkpoint is already in system
+    auto chkpt_ptr = _chksystem->get_chkpt(chkpt_name);
+    if (chkpt_ptr != nullptr) {
+        chkpt_ptr->load_params(&_chksystem->_pool);
+        auto pmem_layers = chkpt_ptr->get_layers_info();
+        std::map<std::string, size_t> layer_map(pmem_layers.begin(), pmem_layers.end());
+        for (int i = 0; i < nlayers; i++) {
+            // parse layer_name, layer_size  and desc_str
+            std::string layer_name, str_layer_size, desc_str;
+            ss >> layer_name >> str_layer_size >> desc_str;
+            size_t layer_size = std::stol(str_layer_size);
+            if (layer_size != layer_map[layer_name]) {
+                printf("DNN structure not match! layer %s: size %ld!=%ld\n", layer_name.c_str(), layer_size, layer_map[layer_name]);
+                return 1;
+            }
+            byte_t* pmem_layer_buff = _chksystem->get_pmem_addr(chkpt_name, layer_name);
 
-        // register layer
-        _chksystem->register_network_layer(chkpt_name, layer_name, layer_size);
-        byte_t* pmem_layer_buff = _chksystem->get_pmem_addr(chkpt_name, layer_name);
-        memset(pmem_layer_buff, 0, layer_size);
+            // add RDMA task to task list
+            add_rdma_task(pmem_layer_buff, layer_size, i, desc_str);
+        }
 
-        // register RDMA buffer
-        struct rdma_buffer *rdma_buff;
-        rdma_buff = rdma_buffer_reg(_rdma_dev, pmem_layer_buff, layer_size);
-        if (!rdma_buff)
-            ERROR_EXIT("Cannot register RDMA buffer\n");
-
-        // construct the RDMA task struct
-        std::shared_ptr<rdma_task_attr> layer_task(new rdma_task_attr);
-        memset(&(*layer_task), 0, sizeof(rdma_task_attr));
-        layer_task->remote_buf_desc_length   = sizeof("0102030405060708:01020304:01020304:0102:010203:1:0102030405060708090a0b0c0d0e0f10");
-        layer_task->remote_buf_desc_str      = new char[layer_task->remote_buf_desc_length];
-        layer_task->local_buf_rdma           = rdma_buff;
-        layer_task->flags                    = uint32_t(_job_type);     // RDMA read
-        layer_task->wr_id                    = i;       // use the layer id to be wr_id
-        memcpy(layer_task->remote_buf_desc_str, &(desc_str[0]), layer_task->remote_buf_desc_length);
-        rdma_exec_params* exec_task_params = rdma_get_exec_params(&(*layer_task));
-
-        // Add this task to task buffer
-        _rdma_tasks.push_back(layer_task);
-        _exec_tasks.push_back(exec_task_params);
+        ackmsg = RESTORE_FINISH_MSG;
     }
-    int ackmsg = TASK_FINISH_MSG;
+    else {
+        // If no such checkpoint, create a new one!
+        printf("New checkpoint! name=%s, layers=%d\n", chkpt_name.c_str(), nlayers);
+        _chksystem->new_chkpt(chkpt_name, nlayers);
+
+        for (int i = 0; i < nlayers; i++) {
+            // parse layer_name, layer_size  and desc_str
+            std::string layer_name, str_layer_size, desc_str;
+            ss >> layer_name >> str_layer_size >> desc_str;
+            size_t layer_size = std::stol(str_layer_size);
+
+            // register layer
+            _chksystem->register_network_layer(chkpt_name, layer_name, layer_size);
+            byte_t* pmem_layer_buff = _chksystem->get_pmem_addr(chkpt_name, layer_name);
+            memset(pmem_layer_buff, 0, layer_size);
+
+            // add RDMA task to task list
+            add_rdma_task(pmem_layer_buff, layer_size, i, desc_str);
+        }
+        ackmsg = NEW_CHKPT_FINISH_MSG;
+    }
     if (write(_sockfd, &ackmsg, sizeof(int)) != sizeof(int))
         ERROR_EXIT("Cannot send finish message\n");
     printf("Network structure inited\n");

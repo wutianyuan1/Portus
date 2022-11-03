@@ -24,7 +24,7 @@ enum job_type {
 class CheckpointServer {
 public:
     CheckpointServer(std::string host, int sockfd, std::shared_ptr<CheckpointSystem> chksystem);
-    // ~CheckpointServer()==default;
+    ~CheckpointServer();
 
     int checkpoint();
     int restore();
@@ -35,6 +35,7 @@ public:
 
 private:
     int rdma_step();
+    int add_rdma_task(byte_t* pmem_layer_buff, size_t layer_size, int wr_id, std::string desc_str);
 
 private:
     int _port;

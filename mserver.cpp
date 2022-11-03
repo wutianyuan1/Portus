@@ -63,6 +63,10 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
                 chkserver.checkpoint();
                 // auto t2 = high_resolution_clock::now();
                 // std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
+            } 
+            else if (req == 2) {
+		std::cout << "Restore request" << std::endl;
+                chkserver.restore();
             }
                 
             else break;

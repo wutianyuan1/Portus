@@ -19,7 +19,6 @@ extern "C" {
 }
 
 
-#define ACK_MSG "rdma_task completed"
 #define ERROR_EXIT(msg) do { std::cerr << msg; return -1; } while (0);
 
 static volatile int keep_running = 1;
@@ -61,7 +60,7 @@ void workerThread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<i
             if (req == 1){
                 using namespace std::chrono;
                 auto t1 = high_resolution_clock::now();
-                chkserver.checkpoint_step();
+                chkserver.checkpoint();
                 auto t2 = high_resolution_clock::now();
                 std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
             }

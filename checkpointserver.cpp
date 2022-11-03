@@ -1,13 +1,14 @@
 #include "checkpointserver.h"
 
 CheckpointServer::CheckpointServer(std::string host, int sockfd, std::shared_ptr<CheckpointSystem> chksystem)
-: _sockfd(sockfd), _chksystem(chksystem) {
+: _sockfd(sockfd), _chksystem(chksystem), _job_type(job_type::gpu_to_pmem) {
     struct sockaddr hostaddr;
     get_addr((char*)host.c_str(), (struct sockaddr *)&hostaddr);
     _rdma_dev = rdma_open_device_server(&hostaddr);
     if (!_rdma_dev) 
         throw std::runtime_error("Cannot open RDMA device\n");
 }
+
 
 int
 CheckpointServer::init_chekcpoint_system() {
@@ -55,7 +56,7 @@ CheckpointServer::init_chekcpoint_system() {
         layer_task->remote_buf_desc_length   = sizeof("0102030405060708:01020304:01020304:0102:010203:1:0102030405060708090a0b0c0d0e0f10");
         layer_task->remote_buf_desc_str      = new char[layer_task->remote_buf_desc_length];
         layer_task->local_buf_rdma           = rdma_buff;
-        layer_task->flags                    = 0x1;     // RDMA read
+        layer_task->flags                    = uint32_t(_job_type);     // RDMA read
         layer_task->wr_id                    = i;       // use the layer id to be wr_id
         memcpy(layer_task->remote_buf_desc_str, &(desc_str[0]), layer_task->remote_buf_desc_length);
         rdma_exec_params* exec_task_params = rdma_get_exec_params(&(*layer_task));
@@ -71,10 +72,11 @@ CheckpointServer::init_chekcpoint_system() {
     return 0;
 }
 
+
 int
-CheckpointServer::checkpoint_step() {
+CheckpointServer::rdma_step() {
     char err_info[256];
-    printf("checkpoint step %d\n", _chkpt_idx++);
+    printf("checkpoint step %d, job type %d\n", _chkpt_idx++, int(_job_type));
     for (auto&& task : _exec_tasks) {
         if (rdma_exec_task(task) ){
             sprintf(err_info, "Submit RDMA task failed\n");
@@ -102,9 +104,35 @@ CheckpointServer::checkpoint_step() {
     // Sending ack-message to the client, confirming that RDMA read/write has been completet
     int ackmsg = TASK_FINISH_MSG;
     if (write(_sockfd, &ackmsg, sizeof(ackmsg)) != sizeof(ackmsg)) {
-        sprintf(err_info, "FAILURE: Couldn't send \"%c\" msg (errno=%d '%m')\n", ACK_MSG, errno);
+        sprintf(err_info, "FAILURE: Couldn't send \"%d\" msg (errno=%d '%m')\n", TASK_FINISH_MSG, errno);
         ERROR_EXIT(err_info);
     }
 
     return 0;
+}
+
+
+int
+CheckpointServer::checkpoint() {
+    if (_job_type != job_type::gpu_to_pmem) {
+        for (auto&& task : _rdma_tasks)
+            task->flags = (uint32_t)job_type::gpu_to_pmem;
+        for (auto&& exec_task : _exec_tasks)
+            exec_task->flags = (uint32_t)job_type::gpu_to_pmem;
+        _job_type = job_type::gpu_to_pmem;
+    }
+    return rdma_step();
+}
+
+
+int
+CheckpointServer::restore() {
+    if (_job_type != job_type::pmem_to_gpu) {
+        for (auto&& task : _rdma_tasks)
+            task->flags = (uint32_t)job_type::pmem_to_gpu;
+        for (auto&& exec_task : _exec_tasks)
+            exec_task->flags = (uint32_t)job_type::pmem_to_gpu;
+        _job_type = job_type::pmem_to_gpu;
+    }
+    return rdma_step();
 }

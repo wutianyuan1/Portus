@@ -14,7 +14,6 @@ extern "C" {
 #include <netinet/tcp.h>
 }
 
-#define ACK_MSG "rdma_task completed"
 #define ERROR_EXIT(msg) do { std::cerr << msg; return -1; } while (0);
 
 static volatile int keep_running = 1;
@@ -217,9 +216,9 @@ CheckpointServer::checkpoint_step() {
     }
 
     // Sending ack-message to the client, confirming that RDMA read/write has been completet
-    int ackmsg = 1;
+    int ackmsg = TASK_FINISH_MSG;
     if (write(_sockfd, &ackmsg, sizeof(ackmsg)) != sizeof(ackmsg)) {
-        sprintf(err_info, "FAILURE: Couldn't send \"%c\" msg (errno=%d '%m')\n", ACK_MSG, errno);
+        sprintf(err_info, "FAILURE: Couldn't send \"%d\" msg (errno=%d '%m')\n", TASK_FINISH_MSG, errno);
         ERROR_EXIT(err_info);
     }
 

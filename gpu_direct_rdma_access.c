@@ -153,21 +153,6 @@ struct rdma_buffer {
     struct rdma_device *rdma_dev;
 };
 
-struct rdma_exec_params {
-	struct rdma_device 	*device;
-	uint64_t 		 wr_id;
-	unsigned long		 rem_buf_rkey;
-	unsigned long long 	 rem_buf_addr;
-	uint32_t 		 rem_buf_size;
-	struct ibv_ah 		*ah;
-	unsigned long 		 rem_dctn; /*QP number from DCT (client)*/
-	uint32_t 		 local_buf_mr_lkey;
-	void 			*local_buf_addr;
-	struct iovec            *local_buf_iovec;
-	int                      local_buf_iovcnt;
-	uint32_t 		 flags; /*enum rdma_task_attr_flags*/
-};
-
 static inline
 int is_server(struct rdma_device *device)
 {

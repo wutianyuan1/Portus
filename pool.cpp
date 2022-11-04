@@ -10,7 +10,7 @@ PMemPool::~PMemPool() {
 }
 
 int
-PMemPool::open_pmem(std::string dev_name, size_t map_size, bool init) {
+PMemPool::open_pmem(std::string dev_name, size_t map_size, bool init, bool use_dram) {
     _mutex.lock();
     // open and map the device
     _dev_name = dev_name;
@@ -23,8 +23,13 @@ PMemPool::open_pmem(std::string dev_name, size_t map_size, bool init) {
         _mutex.unlock();
         return -1;
     }
-
-    _base_addr = static_cast<byte_t*>(mmap(NULL, map_size, PROT_READ|PROT_WRITE, MAP_SHARED, _dev_fd, 0));
+    if (use_dram) {
+        std::cout << "Use Dram\n";
+        _base_addr = static_cast<byte_t*>(malloc(map_size));
+    } else {
+        std::cout << "Use Pmem\n";
+        _base_addr = static_cast<byte_t*>(mmap(NULL, map_size, PROT_READ|PROT_WRITE, MAP_SHARED, _dev_fd, 0));
+    }
 #ifdef DEBUG_
     printf("Status: %s, addr: %p\n", strerror(errno), _base_addr);
 #endif

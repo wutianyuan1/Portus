@@ -10,7 +10,7 @@ public:
     PMemPool();
     ~PMemPool();
 
-    int open_pmem(std::string dev_name, size_t map_size, bool init=false);
+    int open_pmem(std::string dev_name, size_t map_size, bool init=false, bool use_dram=false);
     int close_pmem();
 
     std::pair<off64_t, byte_t*> alloc(size_t alloc_size);

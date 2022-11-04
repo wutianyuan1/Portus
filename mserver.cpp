@@ -33,7 +33,9 @@ void sigint_handler(int dummy) {
 void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<int>> q, std::shared_ptr<CheckpointSystem> chksystem) {
     std::stringstream thread_prefix;
     thread_prefix << "[Thread " << std::setw(2) << tid << "]";
-    std::cout << thread_prefix.str() << " Worker init\n";
+    std::stringstream msg_buf;
+    msg_buf << thread_prefix.str() << " Worker init\n";
+    std::cout << msg_buf.str();
     while (true) {
         int client_fd;
         q->pop(client_fd);
@@ -42,7 +44,8 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
             std::cout << "Bye!\n";
             return;
         }
-        std::cout << thread_prefix.str() <<" Get connection\n";
+        msg_buf << thread_prefix.str() <<" Get connection\n";
+        std::cout << msg_buf.str();
         CheckpointServer chkserver(params.hostaddr, client_fd, chksystem);
         
         // Init checkpoint system
@@ -65,7 +68,7 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
                 // std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
             } 
             else if (req == 2) {
-		std::cout << "Restore request" << std::endl;
+		        std::cout << "Restore request" << std::endl;
                 chkserver.restore();
             }
                 
@@ -132,7 +135,7 @@ int main(int argc, char *argv[]) {
 
     auto q = std::make_shared<ConcurrentQueue<int>>();
     auto chksystem = std::shared_ptr<CheckpointSystem>(
-        new CheckpointSystem(params.dax_device, params.pmem_size, params.init));
+        new CheckpointSystem(params.dax_device, params.pmem_size, params.init, params.dram));
 
     for (int i = 0; i < params.worker; i++) {
         pool.enqueue([&, params=params, i=i] {

@@ -5,7 +5,7 @@
 
 class CheckpointSystem {
 public:
-    CheckpointSystem(std::string dev_name, size_t map_size, bool init=false);
+    CheckpointSystem(std::string dev_name, size_t map_size, bool init=false, bool use_dram=false);
 
     int new_chkpt(std::string chkpt_name, size_t nlayers);
     int remove_chkpt(std::string chkpt_name);

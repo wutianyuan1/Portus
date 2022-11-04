@@ -10,6 +10,7 @@ struct user_params {
     int port;
     bool init;
     int worker;
+    bool dram;
 };
 
 
@@ -25,6 +26,7 @@ usage(const char *argv0) {
     printf("  -s, --size=<size>         size of mapped region of the PMEM in MB (default 16GB)\n");
     printf("  -i, --init=<0/1>          whether to clean-up the PMEM device and init a new FS on it\n");
     printf("  -w, --worker=<num>        multithread worker num\n");
+    printf("  -m, --memory=<0|1>        use memory instead of pmem\n");
 }
 
 
@@ -34,10 +36,11 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
     /*Set defaults*/
     usr_par->hostaddr.assign("192.168.10.4");
     usr_par->dax_device.assign("/dev/dax0.0");
-    usr_par->pmem_size = (size_t)128*1024*1024*1024;
+    usr_par->pmem_size = (size_t)16*1024*1024*1024;
     usr_par->port = 12345;
     usr_par->init = true;
     usr_par->worker = 4;
+    usr_par->dram = false;
 
     while (1) {
         int c;
@@ -49,10 +52,11 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
             { .name = "size", .has_arg = 1, .val = 's' },
             { .name = "init", .has_arg = 1, .val = 'i' },
             { .name = "worker", .has_arg = 1, .val = 'w'},
+            { .name = "memory", .has_arg = 1, .val = 'm'},
             { 0 }
         };
 
-        c = getopt_long(argc, argv, "d:a:p:s:i:w:",
+        c = getopt_long(argc, argv, "d:a:p:s:i:w:d:m:",
                         long_options, NULL);
         
         if (c == -1)
@@ -85,6 +89,10 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
 
         case 'w':
             usr_par->worker = strtol(optarg, NULL, 0);
+            break;
+        
+        case 'm':
+            usr_par->dram = strtol(optarg, NULL, 0);
             break;
             
         default:

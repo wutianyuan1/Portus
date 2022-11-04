@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <functional>
 
 extern "C" {
 #include <sys/types.h>
@@ -26,8 +27,14 @@ static volatile int keep_running = 1;
 
 // int debug = 1;
 
-void sigint_handler(int dummy) {
-    keep_running = 0;
+namespace {
+std::function<void(int)> shutdown_handler;
+
+void sigint_handler(int signal) {
+    // keep_running = 0;
+    // std::cout << "Receive SIGINT, gracefully shutdown\n";
+    shutdown_handler(signal);
+}
 }
 
 void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<int>> q, std::shared_ptr<CheckpointSystem> chksystem) {
@@ -36,16 +43,20 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
     std::stringstream msg_buf;
     msg_buf << thread_prefix.str() << " Worker init\n";
     std::cout << msg_buf.str();
+    msg_buf.str("");
     while (true) {
         int client_fd;
         q->pop(client_fd);
         // exit
         if (client_fd == -1) {
-            std::cout << "Bye!\n";
+            msg_buf << thread_prefix.str() <<" Bye\n";
+            std::cout << msg_buf.str();
+            msg_buf.str("");
             return;
         }
         msg_buf << thread_prefix.str() <<" Get connection\n";
         std::cout << msg_buf.str();
+        msg_buf.str("");
         CheckpointServer chkserver(params.hostaddr, client_fd, chksystem);
         
         // Init checkpoint system
@@ -61,14 +72,9 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
         do {
             recv(client_fd, &req, sizeof(req), MSG_WAITALL);
             if (req == 1){
-                using namespace std::chrono;
-                // auto t1 = high_resolution_clock::now();
                 chkserver.checkpoint();
-                // auto t2 = high_resolution_clock::now();
-                // std::cout << "Time:" << (double)duration_cast<microseconds>(t2 - t1).count() / 1000000.0 << "\n";
             } 
             else if (req == 2) {
-		        std::cout << "Restore request" << std::endl;
                 chkserver.restore();
             }
                 
@@ -76,7 +82,9 @@ void worker_thread(int tid, user_params params, std::shared_ptr<ConcurrentQueue<
             req = 0;
         } while (keep_running);
 
-        std::cout << "Fin\n";
+        msg_buf << thread_prefix.str() <<" End connection\n";
+        std::cout << msg_buf.str();
+        msg_buf.str("");
     }
 }
 
@@ -137,6 +145,17 @@ int main(int argc, char *argv[]) {
     auto chksystem = std::shared_ptr<CheckpointSystem>(
         new CheckpointSystem(params.dax_device, params.pmem_size, params.init, params.dram));
 
+    signal(SIGINT, sigint_handler);
+    shutdown_handler = [&](int signal){
+        // Make all thread return
+        std::cout << "Receive SIGINT, gracefully shutdown\n";
+        for (int i = 0; i < params.worker; i++) {
+            q->push(-1);
+        }
+        exit(0);
+    };
+
+
     for (int i = 0; i < params.worker; i++) {
         pool.enqueue([&, params=params, i=i] {
             worker_thread(i, params, q, chksystem);
@@ -146,7 +165,7 @@ int main(int argc, char *argv[]) {
     // listen port
     int sockfd = open_server_socket(params.port);
 
-    while (true) {
+    while (keep_running) {
         int newconnection = accept(sockfd, NULL, 0);
         if (sockfd < 0) {
             sprintf(err_info, "accept() failed\n");

@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/wuty/anaconda3/include/**",
+                "/usr/local/cuda-11.8/include/**",
+                "/home/wuty/anaconda3/lib/python3.9/site-packages/torch/include/**",
+                "/home/wuty/anaconda3/lib/python3.9/site-packages/torch/include/torch/csrc/api/include/**",
+                "/home/wuty/anaconda3/lib/python3.9/site-packages/torch/include/THC/**",
+                "/home/wuty/anaconda3/include/python3.9",
+                "${env:CONDA_PREFIX}/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

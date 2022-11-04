@@ -17,8 +17,8 @@ const int TASK_WRITE = 0;
 
 class Client {
 public:
-    Client(std::string _server_name, int _port) : server_name(_server_name), port(_port) {
-        get_addr("192.168.10.101", (struct sockaddr *)&hostaddr);
+    Client(std::string _server_name, int _port) : server_name(_server_name), port(_port), need_wait(false) {
+        get_addr("192.168.10.102", (struct sockaddr *)&hostaddr);
         sockfd = open_client_socket(server_name.c_str(), port);
         int one = 1;
         setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
@@ -43,8 +43,9 @@ public:
         rdma_close_device(rdma_dev);
     }
     int register_network(std::string name, torch_network_t& network);
-    int transmit(); // 摆烂transmit
+    int transmit(bool async=false); // 摆烂transmit
     int receive();
+    int wait(int expect_msg);
 
 private:
     int register_var(std::string name, void *addr, size_t length);
@@ -64,6 +65,7 @@ private:
     int port;
     struct sockaddr hostaddr;
     int sockfd;
+    bool need_wait;
 
     struct rdma_device *rdma_dev;
 };

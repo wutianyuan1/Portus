@@ -2,6 +2,7 @@ import torch
 import gpu_rpma
 import time
 from sys import argv
+import os
 
 torch_t0 = time.time()
 fake_params1 = {
@@ -40,11 +41,17 @@ def main(model_name, idx):
     gpu_rpma.init_checkpoint(model_name, fake_params[idx])
     t1 = time.time()
     print("rpma init: ", t1 - t0, "s")
-    for _ in range(5):
+    n = 1
+    for _ in range(n):
         #torch.save(fake_params[idx], "/mnt/beegfs/shared/checkpoint{}.pt".format(idx))
-        gpu_rpma.checkpoint()
+        gpu_rpma.checkpoint(True)
+        # time.sleep(1)
+        t11 = time.time()
+        gpu_rpma.wait_checkpoint_done()
+        t12 = time.time()
+        print("wait", t12 - t11)
     t2 = time.time()
-    print(model_name, (t2-t1)/5)
+    print(model_name, (t2-t1)/n)
 
 if __name__ == '__main__':
     main(argv[1], int(argv[2]))

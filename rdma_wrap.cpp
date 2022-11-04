@@ -86,7 +86,7 @@ int Client::register_var(std::string name, void *addr, size_t length) {
     return 0;
 }
 
-int Client::transmit() {
+int Client::transmit(bool async) {
     int  ret_size;
     int cnt = 0;
     int i = 1;
@@ -94,23 +94,35 @@ int Client::transmit() {
 
     ret_size = write(sockfd, &CHECKPOINT_MSG, sizeof(CHECKPOINT_MSG));
     if (ret_size != sizeof(i)) {
-        // TODO
+        std::cerr << "Write no enough bytes (expected 4), actual: " << ret_size << std::endl;
+        return 1;
     }
-    
-    // Wating for confirmation message from the socket that rdma_read/write from the server has beed completed
-    ret_size = recv(sockfd, &acki, sizeof acki, MSG_WAITALL);
+    need_wait = true;
 
-    // std::cout << "Received ack length: " << ret_size << std::endl;
-    // std::cout << "Received ack: " << (int)acki << std::endl;
-    if (ret_size != sizeof SUCCESS_MSG) {
-        // TODO
-	// std::cout << "Received not enough ack: " << ret_size << std::endl;
-    } else if (acki != SUCCESS_MSG) {
-        // TODO
+    return async ? 0 : this->wait(SUCCESS_MSG);
+}
+
+
+int Client::wait(int expect_msg) {
+    // If we don't need to wait job done, just returns 0.
+    if (!need_wait)
+        return 0;
+
+    int acki;
+    // Wating for confirmation message from the socket that rdma_read/write from the server has beed completed
+    int ret_size = recv(sockfd, &acki, sizeof acki, MSG_WAITALL);
+
+    if (ret_size != sizeof expect_msg) {
+	    std::cerr << "Received not enough ack: " << ret_size << std::endl;
+        return 1;
+    } else if (acki != expect_msg) {
+        std::cerr << "Received unexpected message: " << acki << std::endl;
+        return 1;
     }
-    
+    need_wait = false;
     return 0;
 }
+
 
 int Client::receive() {
     int  ret_size;

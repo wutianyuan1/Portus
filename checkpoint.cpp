@@ -21,12 +21,16 @@ int init_checkpoint(std::string name, torch_network_t& network) {
     return 0;
 }
 
-int checkpoint(){
-    return client->transmit();;
+int checkpoint(bool async){
+    return client->transmit(async);
 }
 
 int restore(){
     return client->receive();
+}
+
+int wait_checkpoint_done(){
+    return client->wait(1);
 }
 
 void optimizer_step(){

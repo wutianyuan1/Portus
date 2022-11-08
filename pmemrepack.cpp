@@ -1,7 +1,6 @@
 #include "chksystem.h"
 
 
-
 struct layer_data_t {
     byte_t* data;
     size_t size;
@@ -29,7 +28,7 @@ int main(int argc, char** argv){
             { 0 }
         };
 
-        int c = getopt_long(argc, argv, "d:s:v:", long_options, NULL);
+        int c = getopt_long(argc, argv, "d:", long_options, NULL);
         if (c == -1)
             break;
 

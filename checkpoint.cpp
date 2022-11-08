@@ -14,8 +14,8 @@
 
 Client *client;
 
-int init_checkpoint(std::string name, torch_network_t& network) {
-    client = new Client("192.168.10.4", 12345);
+int init_checkpoint(std::string name, torch_network_t& network, std::string ib_local_addr, std::string server_addr) {
+    client = new Client(server_addr, 12345, ib_local_addr);
     client->register_network(name, network);
 
     return 0;

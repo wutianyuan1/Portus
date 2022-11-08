@@ -19,7 +19,7 @@ def main():
         # torch.save(fake_params, "/home/wuty/workspace/bert-cloth/nvm/chkpt_torch.pt")
         #gpu_rpma.checkpoint()
     gpu_rpma.checkpoint()
-    #gpu_rpma.restore()
+    # gpu_rpma.restore()
     t2 = time.time()
     print(t2-t1)
     print(fake_params['module.layer1'][0][0])

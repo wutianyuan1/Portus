@@ -17,8 +17,8 @@ const int TASK_WRITE = 0;
 
 class Client {
 public:
-    Client(std::string _server_name, int _port) : server_name(_server_name), port(_port), need_wait(false) {
-        get_addr("192.168.10.102", (struct sockaddr *)&hostaddr);
+    Client(std::string _server_name, int _port, std::string local_addr) : server_name(_server_name), port(_port), need_wait(false) {
+        get_addr(const_cast<char*>(local_addr.c_str()), (struct sockaddr *)&hostaddr);
         sockfd = open_client_socket(server_name.c_str(), port);
         int one = 1;
         setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));

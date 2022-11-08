@@ -40,6 +40,12 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
 #endif
 }
 
+
+CheckpointSystem::~CheckpointSystem(){
+    _pool.close_pmem();
+}
+
+
 int
 CheckpointSystem::new_chkpt(std::string chkpt_name, size_t nlayers) {
     _mutex.lock();

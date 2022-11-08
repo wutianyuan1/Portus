@@ -22,7 +22,7 @@ int main(int argc, char** argv){
         static struct option long_options[] = {
             { .name = "device", .has_arg = 1, .val = 'd' },
             { .name = "size", .has_arg = 1, .val = 's' },
-            { .name = "verbose", .has_arg = 1, .val = 'i' },
+            { .name = "verbose", .has_arg = 1, .val = 'v' },
             { 0 }
         };
 

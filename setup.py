@@ -11,6 +11,7 @@ setup(name='gpu_rpma',
                   libraries=['gpu_rdma_access', "ibverbs", "mlx5", "rdmacm"]),
             ],
       libraries=[libgpu_rdma_access],
+      package_data={'my_package': ['gpu_rpma.pyi']},
       cmdclass={
             'build_ext': cpp_extension.BuildExtension
             })

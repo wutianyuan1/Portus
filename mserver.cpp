@@ -140,7 +140,6 @@ int main(int argc, char *argv[]) {
         return 1;
 
     ThreadPool pool(params.worker);
-
     auto q = std::make_shared<ConcurrentQueue<int>>();
     auto chksystem = std::shared_ptr<CheckpointSystem>(
         new CheckpointSystem(params.dax_device, params.pmem_size, params.init, params.dram));

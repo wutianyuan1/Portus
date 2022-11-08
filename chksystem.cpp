@@ -2,7 +2,7 @@
 
 
 CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool init, bool use_dram) {
-    _pool.open_pmem(dev_name, map_size, init);
+    _pool.open_pmem(dev_name, map_size, init, use_dram);
     // The chkpt table always hold the first 2MB available chunk
     if (init){
         auto ret = _pool.alloc(CHKPT_TABLE_SIZE);

@@ -56,7 +56,7 @@ parse_command_line(int argc, char *argv[], struct user_params *usr_par) {
             { 0 }
         };
 
-        c = getopt_long(argc, argv, "d:a:p:s:i:w:d:m:",
+        c = getopt_long(argc, argv, "d:a:p:s:i:w:m:",
                         long_options, NULL);
         
         if (c == -1)

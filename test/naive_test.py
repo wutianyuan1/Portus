@@ -12,7 +12,7 @@ def main():
     
     # torch.save(fake_params, "./chkpt_torch.pt")
     # print("original checkpointing time:", t2-t1)
-    gpu_rpma.init_checkpoint("SBNetwork", fake_params)
+    gpu_rpma.init_checkpoint("SBNetwork", fake_params, "192.168.10.102")
     t1 = time.time()
     #for i in range(10):
         # torch.save(fake_params, "/mnt/beegfs/shared/chkpt_torch.pt")

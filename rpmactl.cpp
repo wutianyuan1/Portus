@@ -12,7 +12,7 @@ enum functions_t {
 
 enum output_t {
     HDF5,
-    Pickle
+    PICKLE
 };
 
 struct layer_data_t {
@@ -181,7 +181,7 @@ int main(int argc, char** argv){
             output_type = (output_t)strtol(optarg, NULL, 0);
             break;
         default:
-            usage(argv[0]);
+            usage(argv[0], function);
             return 1;
         }
     }

@@ -1,6 +1,6 @@
 #include <torch/extension.h>
 
-#include "utils.h"
+#include "../common/utils.h"
 #include "checkpoint.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

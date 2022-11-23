@@ -1,7 +1,7 @@
 #include "checkpoint.h"
-#include "gpu_direct_rdma_access.h"
+#include "../common/gpu_direct_rdma_access.h"
 #include "raw_tensor.h"
-#include "utils.h"
+#include "../common/utils.h"
 #include "rdma_wrap.h"
 
 #include <memory>

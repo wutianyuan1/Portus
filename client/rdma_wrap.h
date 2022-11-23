@@ -2,8 +2,8 @@
 
 #include <string>
 #include <vector>
-#include "utils.h"
-#include "gpu_direct_rdma_access.h"
+#include "../common/utils.h"
+#include "../common/gpu_direct_rdma_access.h"
 #include "raw_tensor.h"
 
 extern "C" {

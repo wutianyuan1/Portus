@@ -81,6 +81,8 @@ PMemPool::alloc(size_t alloc_size) {
             std::cerr << "PMem pool is full, allocation failed\n";
             return {0, nullptr};
     }
+    size_t old_chunks = _allocated_chunks.load();
+    off64_t old_offset = _tail_offset;
     _allocated_chunks += 1;
     _tail_offset += aligned_size;
     // in PM updates
@@ -94,9 +96,9 @@ PMemPool::alloc(size_t alloc_size) {
     // (2) update global counts
     _mm_mfence();
     // update number of allocated chunks: pm_base_i64[0] = _allocated_chunks;
-    __sync_bool_compare_and_swap(&pm_base_i64[0], _allocated_chunks - 1, _allocated_chunks); 
+    __sync_bool_compare_and_swap(&pm_base_i64[0], old_chunks, _allocated_chunks); 
     // update the offset of last obj: pm_base_i64[1] = _tail_offset
-    __sync_bool_compare_and_swap(&pm_base_i64[1], _tail_offset - aligned_size, _tail_offset); 
+    __sync_bool_compare_and_swap(&pm_base_i64[1], old_offset, _tail_offset); 
     _mm_mfence();
     _mm_clwb(pm_base_i64);
     _mm_mfence();

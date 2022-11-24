@@ -54,6 +54,7 @@ CheckpointSystem::new_chkpt(std::string chkpt_name, size_t nlayers) {
         std::cerr << "Checkpoint " << chkpt_name << " exists\n";
         // return 1;
     }
+    size_t old_chkpts = _n_chkpts;
     _n_chkpts++;
     std::shared_ptr<PMemDNNCheckpoint> chkpt(new PMemDNNCheckpoint(chkpt_name, nlayers));
     _chkpts[chkpt_name] = chkpt;
@@ -64,7 +65,7 @@ CheckpointSystem::new_chkpt(std::string chkpt_name, size_t nlayers) {
     _mm_clwb(&_chkpt_table_ptr[_n_chkpts]);
     _mm_mfence();
     // _chkpt_table_ptr[0] = _n_chkpts;
-    __sync_bool_compare_and_swap(&_chkpt_table_ptr[0], _n_chkpts - 1, _n_chkpts);
+    __sync_bool_compare_and_swap(&_chkpt_table_ptr[0], old_chkpts, _n_chkpts);
     _mm_mfence();
     _mm_clwb(&_chkpt_table_ptr[0]);
     return 0;

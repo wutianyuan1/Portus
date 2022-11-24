@@ -9,6 +9,7 @@
 #include <functional>
 #include <mutex>
 #include <sstream>
+#include <atomic>
 
 #include <unistd.h>
 #include <signal.h>

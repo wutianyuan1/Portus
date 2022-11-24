@@ -60,6 +60,7 @@
         "iomanip": "cpp",
         "cfenv": "cpp",
         "typeindex": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "bit": "cpp"
     }
 }

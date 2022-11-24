@@ -26,8 +26,7 @@ public:
     PMemPool _pool;
     off64_t* _chkpt_table_ptr;
     off64_t _chkpt_table_offset;
-    size_t _n_chkpts;
+    std::atomic<size_t> _n_chkpts;
     std::map<std::string, std::shared_ptr<PMemDNNCheckpoint> > _chkpts;
     std::map<std::string, int> _name_to_tableidx;
-    std::mutex _mutex;
 };

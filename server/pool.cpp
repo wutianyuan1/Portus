@@ -71,7 +71,6 @@ PMemPool::close_pmem() {
 
 std::pair<off64_t, byte_t*>
 PMemPool::alloc(size_t alloc_size) {
-    _mutex.lock();
     size_t aligned_size = (alloc_size%256 == 0 ? alloc_size : (1 + (alloc_size/256))*256);
     off64_t cur_offset = _tail_offset;
     byte_t* ptr = _base_addr + cur_offset;
@@ -94,12 +93,13 @@ PMemPool::alloc(size_t alloc_size) {
     _mm_clwb(&pm_base_i64[2*_allocated_chunks + 1]);
     // (2) update global counts
     _mm_mfence();
-    pm_base_i64[0] = _allocated_chunks; // update number of allocated chunks
-    pm_base_i64[1] = _tail_offset; // update the offset of last obj
+    // update number of allocated chunks: pm_base_i64[0] = _allocated_chunks;
+    __sync_bool_compare_and_swap(&pm_base_i64[0], _allocated_chunks - 1, _allocated_chunks); 
+    // update the offset of last obj: pm_base_i64[1] = _tail_offset
+    __sync_bool_compare_and_swap(&pm_base_i64[1], _tail_offset - aligned_size, _tail_offset); 
     _mm_mfence();
     _mm_clwb(pm_base_i64);
     _mm_mfence();
-    _mutex.unlock();
     return {cur_offset, ptr};
 }
 
@@ -127,7 +127,7 @@ void
 PMemPool::print_stats() const {
     off64_t* pm_base_i64 = reinterpret_cast<off64_t*>(_base_addr);
     printf("Current allocated chunks: %ld, current available offset: %ld\n",
-        _allocated_chunks, _tail_offset);
+        _allocated_chunks.load(), _tail_offset.load());
     for (int i = 1; i <= _allocated_chunks; i++)
         printf("  chunk %d: size=%ld, relative offset=%ld\n",
             i - 1, pm_base_i64[2*i], pm_base_i64[2*i + 1] - ALLOC_TABLE_SIZE);

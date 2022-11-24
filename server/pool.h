@@ -26,7 +26,7 @@ private:
     size_t _map_size;
     int _dev_fd;
     byte_t* _base_addr;
-    size_t _allocated_chunks;
-    off64_t _tail_offset;
+    std::atomic<size_t> _allocated_chunks;
+    std::atomic<off64_t> _tail_offset;
     std::mutex _mutex;
 };

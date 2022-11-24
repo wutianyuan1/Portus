@@ -21,7 +21,7 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
     _n_chkpts = _chkpt_table_ptr[0];
     if (_n_chkpts != 0){
 #ifdef DEBUG_
-        printf("We already have %d chkpts on this PMem\n", _n_chkpts);
+        printf("We already have %d chkpts on this PMem\n", _n_chkpts.load());
 #endif
         for (int i = 0; i < _n_chkpts; i++) {
             off64_t chkpt_offset = _chkpt_table_ptr[i + 1];
@@ -37,6 +37,8 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
 #ifdef DEBUG_
     else
         printf("Empty chkpt pool\n");
+    if (_n_chkpts.is_lock_free())
+        printf("Lock free!\n");
 #endif
 }
 
@@ -48,10 +50,8 @@ CheckpointSystem::~CheckpointSystem(){
 
 int
 CheckpointSystem::new_chkpt(std::string chkpt_name, size_t nlayers) {
-    _mutex.lock();
     if (_chkpts.find(chkpt_name) != _chkpts.end()) {
         std::cerr << "Checkpoint " << chkpt_name << " exists\n";
-        // _mutex.unlock();
         // return 1;
     }
     _n_chkpts++;
@@ -63,10 +63,10 @@ CheckpointSystem::new_chkpt(std::string chkpt_name, size_t nlayers) {
     _mm_mfence();
     _mm_clwb(&_chkpt_table_ptr[_n_chkpts]);
     _mm_mfence();
-    _chkpt_table_ptr[0] = _n_chkpts;
+    // _chkpt_table_ptr[0] = _n_chkpts;
+    __sync_bool_compare_and_swap(&_chkpt_table_ptr[0], _n_chkpts - 1, _n_chkpts);
     _mm_mfence();
     _mm_clwb(&_chkpt_table_ptr[0]);
-    _mutex.unlock();
     return 0;
 }
 
@@ -77,23 +77,24 @@ CheckpointSystem::is_valid_offset(off64_t offset) {
 
 int
 CheckpointSystem::remove_chkpt(std::string chkpt_name) {
-    _mutex.lock();
     if (_name_to_tableidx.find(chkpt_name) == _name_to_tableidx.end()) {
         std::cerr << "Cannot remove " << chkpt_name << ": checkpoint does not exist\n";
-        _mutex.unlock();
         return 1;
     }
     int table_idx = _name_to_tableidx[chkpt_name];
     _mm_mfence();
     // mark the left-most bit on PMEM to be 1 -> invalidate
     _chkpt_table_ptr[table_idx] = (_chkpt_table_ptr[table_idx] | ((size_t)1 << 63) );
+    // decrease chkpt count
+    _n_chkpts--;
+    // _chkpt_table_ptr[0] = _n_chkpts;
+    __sync_bool_compare_and_swap(&_chkpt_table_ptr[0], _n_chkpts + 1, _n_chkpts);
     _mm_mfence();
     _mm_clwb(&_chkpt_table_ptr[table_idx]);
     _mm_mfence();
     // remove it from DRAM std::map
     _chkpts.erase(chkpt_name);
     _name_to_tableidx.erase(chkpt_name);
-    _mutex.unlock();
     return 0;
 }
 

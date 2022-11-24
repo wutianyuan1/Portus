@@ -1,6 +1,9 @@
 #include "chksystem.h"
+#ifdef USE_HDF5
 #include <H5Cpp.h>
 #include <hdf5.h>
+#endif
+
 
 enum functions_t {
     VIEW_CHECKPOINTS,
@@ -53,6 +56,7 @@ static void usage(const char *argv0, functions_t func=functions_t::UNKOWN) {
 
 
 static void dump_to_hdf5(std::shared_ptr<PMemDNNCheckpoint> chkpt, std::string out_fn) {
+#ifdef USE_HDF5
     H5::H5File file(out_fn, H5F_ACC_CREAT | H5F_ACC_RDWR);
 
     H5::FloatType datatype(H5::PredType::NATIVE_FLOAT);
@@ -69,6 +73,7 @@ static void dump_to_hdf5(std::shared_ptr<PMemDNNCheckpoint> chkpt, std::string o
         dataset.close();
     }
     file.close();
+#endif
 }
 
 
@@ -88,7 +93,7 @@ static void repack(CheckpointSystem* chksys, std::string dax_device, size_t pmem
     // load all valid checkpoints to main memory, invalid chkpts will not be loaded
     for (auto& chkpt_name : chksys->existing_chkpts()) {
         auto chkpt = chksys->get_chkpt(chkpt_name);
-        printf("load model %s, layers: %d\n", chkpt_name.c_str(), chkpt->nlayers());
+        printf("load model %s, layers: %ld\n", chkpt_name.c_str(), chkpt->nlayers());
         for (auto&& [layer_name, layer_size] : chkpt->get_layers_info()) {
             all_models[chkpt_name][layer_name].data = new byte_t[layer_size];
             all_models[chkpt_name][layer_name].size = layer_size;
@@ -102,7 +107,7 @@ static void repack(CheckpointSystem* chksys, std::string dax_device, size_t pmem
     // write to a new system
     for (auto&& [chkpt_name, layer_info]: all_models) {
         newsys->new_chkpt(chkpt_name, layer_info.size());
-        printf("new model %s, layers: %d\n", chkpt_name.c_str(), layer_info.size());
+        printf("new model %s, layers: %ld\n", chkpt_name.c_str(), layer_info.size());
         auto chkpt = newsys->get_chkpt(chkpt_name);
         for (auto&& [layer_name, layer_data] : layer_info) {
             newsys->register_network_layer(chkpt_name, layer_name, layer_data.size);

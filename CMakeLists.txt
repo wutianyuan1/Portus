@@ -8,6 +8,12 @@ set(CMAKE_CXX_FLAGS "-O2 -mclwb")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "-O2")
 
+OPTION(DEBUG "print debug messages" OFF)
+if (DEBUG)
+    add_definitions("-DDEBUG_")
+endif(DEBUG)
+
+
 find_library(RDMACM_LIBRARIES rdmacm)
 find_library(IBVERBS_LIBRARIES ibverbs)
 find_library(MLX5_LIBRARIES mlx5)
@@ -24,7 +30,18 @@ add_library(gpu_rdma SHARED ${RDMA_LIB_SOURCES})
 target_link_libraries(gpu_rdma ${RDMACM_LIBRARIES} ${IBVERBS_LIBRARIES} ${MLX5_LIBRARIES})
 
 add_executable(rpmactl ${RPMACTL_SOURCES})
-target_link_libraries(rpmactl rpma_common hdf5 hdf5_cpp)
+OPTION(USE_HDF5 "support dump checkpoints to HDF5 files" OFF)
+
+IF(USE_HDF5)
+    message("HDF5 support: ON")
+    add_definitions("-DUSE_HDF5")
+    target_link_libraries(rpmactl rpma_common hdf5 hdf5_cpp)
+else()
+    message("HDF5 support: OFF")
+    target_link_libraries(rpmactl rpma_common)
+endif(USE_HDF5)
+
+
 
 add_executable(mserver ${MSERVER_SOURCES})
 target_link_libraries(mserver gpu_rdma rpma_common ${RDMACM_LIBRARIES} ${IBVERBS_LIBRARIES} ${MLX5_LIBRARIES})

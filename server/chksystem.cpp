@@ -1,5 +1,7 @@
 #include "chksystem.h"
+#include <numeric>
 
+#define CHKSYS_MAGIC 0xdeadbeef
 
 CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool init, bool use_dram) {
     _pool.open_pmem(dev_name, map_size, init, use_dram);
@@ -10,7 +12,7 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
         _chkpt_table_ptr = reinterpret_cast<off64_t*>(ret.second);
         _mm_mfence();
         memset(_chkpt_table_ptr, 0, CHKPT_TABLE_SIZE);
-        _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = 0xdeadbeef;
+        _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = CHKSYS_MAGIC;
         _mm_mfence();
         clwb(reinterpret_cast<byte_t*>(_chkpt_table_ptr), CHKPT_TABLE_SIZE);
         _mm_mfence();
@@ -19,7 +21,7 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
         _chkpt_table_offset = 0 + ALLOC_TABLE_SIZE;
         _chkpt_table_ptr = reinterpret_cast<off64_t*>(_pool.get_obj(_chkpt_table_offset));
         // check if it's a valid chksystem, if fails, reopen the pool to init it
-        if (_chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] != 0xdeadbeef) {
+        if (_chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] != CHKSYS_MAGIC) {
             // 要什么优雅，我服了，我把他复制一坨不就完了吗。。。
             std::cerr << "Invalid partition: Incorrect Magic Number" << std::endl;
             _pool.close_pmem();
@@ -29,7 +31,7 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
             _chkpt_table_ptr = reinterpret_cast<off64_t*>(ret.second);
             _mm_mfence();
             memset(_chkpt_table_ptr, 0, CHKPT_TABLE_SIZE);
-            _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = 0xdeadbeef;
+            _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = CHKSYS_MAGIC;
             _mm_mfence();
             clwb(reinterpret_cast<byte_t*>(_chkpt_table_ptr), CHKPT_TABLE_SIZE);
             _mm_mfence();
@@ -176,6 +178,27 @@ std::vector<std::string>
 CheckpointSystem::existing_chkpts() {
     std::vector<std::string> ret;
     std::for_each(_chkpts.begin(), _chkpts.end(), [&](auto&& item) { ret.push_back(item.first); });
+    return ret;
+}
+
+std::vector<std::pair<std::string, int> >
+CheckpointSystem::invalid_chkpts() {
+    std::vector<std::pair<std::string, int> > ret;
+    for (int i = 0; i < _n_chkpts; i++) {
+        off64_t chkpt_offset = _chkpt_table_ptr[i + 1];
+        // find invalid (removed) checkpoints
+        if (!is_valid_offset(chkpt_offset)) {
+            // make it tempory valid
+            chkpt_offset ^= ((size_t)1 << 63);
+            PMemDNNCheckpoint chkpt;
+            chkpt.from_pmem(&_pool, chkpt_offset);
+            chkpt.load_params(&_pool);
+            auto info = chkpt.get_layers_info();
+            size_t space_used = std::accumulate(info.begin(), info.end(), 0, 
+                [&](auto&& lhs, auto&& rhs)->size_t { return lhs + rhs.second; } );
+            ret.push_back({chkpt.name(), space_used});
+        }
+    }
     return ret;
 }
 

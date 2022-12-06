@@ -22,9 +22,10 @@ PYBIND11_MODULE(rpma_server, m) {
 
     py::class_<CheckpointSystem>(m, "CheckpointSystem")
         .def(py::init<std::string, size_t, bool, bool>(), "Constructor of CheckpointSystem")
-        .def("new_chkpt", &CheckpointSystem::new_chkpt, "add a sample to the memory")
-        .def("remove_chkpt", &CheckpointSystem::remove_chkpt, "add a sample to the memory")
+        .def("new_chkpt", &CheckpointSystem::new_chkpt, "add a new DNN checkpoint")
+        .def("remove_chkpt", &CheckpointSystem::remove_chkpt, "remove a DNN checkpoint")
         .def("existing_chkpts", &CheckpointSystem::existing_chkpts, "get existing checkpoint names")
+        .def("invalid_chkpts", &CheckpointSystem::invalid_chkpts, "get invalid checkpoint info")
         .def("get_chkpt", &CheckpointSystem::get_chkpt_obj, "get checkpoint info by name")
         .def("__repr__",
             [](CheckpointSystem& chksys) {

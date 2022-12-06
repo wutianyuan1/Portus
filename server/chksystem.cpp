@@ -143,6 +143,18 @@ CheckpointSystem::get_chkpt(std::string chkpt_name) {
     return iter->second;
 }
 
+PMemDNNCheckpoint
+CheckpointSystem::get_chkpt_obj(std::string chkpt_name) {
+    auto iter = _chkpts.find(chkpt_name);
+    if (iter == _chkpts.end()) {
+        std::cerr << "Get checkpoint " << chkpt_name << " failed: checkpoint does not exist\n";
+        return PMemDNNCheckpoint("none", 0);
+    }
+    auto obj_ptr = iter->second;
+    (obj_ptr)->load_params(&_pool);
+    return *(obj_ptr);
+}
+
 std::vector<std::string>
 CheckpointSystem::existing_chkpts() {
     std::vector<std::string> ret;

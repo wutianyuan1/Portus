@@ -61,6 +61,10 @@
         "cfenv": "cpp",
         "typeindex": "cpp",
         "future": "cpp",
-        "bit": "cpp"
+        "bit": "cpp",
+        "forward_list": "cpp",
+        "unordered_set": "cpp",
+        "valarray": "cpp",
+        "variant": "cpp"
     }
 }

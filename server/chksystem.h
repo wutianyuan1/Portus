@@ -16,6 +16,7 @@ public:
     int chkpt_summary(std::string chkpt_name, int verbose=0);
 
     std::shared_ptr<PMemDNNCheckpoint> get_chkpt(std::string chkpt_name);
+    PMemDNNCheckpoint get_chkpt_obj(std::string chkpt_name);
     std::vector<std::string> existing_chkpts();
     byte_t* get_pmem_addr(std::string chkpt_name, std::string layer_name);
 

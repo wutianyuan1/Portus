@@ -3,7 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/home/wuty/miniconda3/include/python3.9/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

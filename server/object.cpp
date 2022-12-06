@@ -52,6 +52,13 @@ PMemDNNCheckpoint::PMemDNNCheckpoint()
 PMemDNNCheckpoint::PMemDNNCheckpoint(std::string chkpt_name, int nlayers)
     : _chkpt_name(chkpt_name), _nlayers(nlayers), _cur_layer_idx(0) {}
 
+PMemDNNCheckpoint::PMemDNNCheckpoint(const PMemDNNCheckpoint& other)
+    : _chkpt_name(other._chkpt_name), _nlayers(other._nlayers), 
+      _cur_layer_idx(other._cur_layer_idx), _nn_params(other._nn_params) {
+        this_ptr = other.this_ptr;
+        this_offset = other.this_offset;
+}
+
 
 // Re-construct from PMem - deserialization
 // Note: the detailed parameters are not loaded for better performance

@@ -42,6 +42,7 @@ class PMemDNNCheckpoint : public PMemObject {
 public:
     // New checkpoint
     PMemDNNCheckpoint();
+    PMemDNNCheckpoint(const PMemDNNCheckpoint& other);
     PMemDNNCheckpoint(std::string chkpt_name, int nlayers);
 
     // Re-construct from PMem - deserialization

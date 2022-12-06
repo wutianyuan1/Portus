@@ -10,6 +10,7 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
         _chkpt_table_ptr = reinterpret_cast<off64_t*>(ret.second);
         _mm_mfence();
         memset(_chkpt_table_ptr, 0, CHKPT_TABLE_SIZE);
+        _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = 0xdeadbeef;
         _mm_mfence();
         clwb(reinterpret_cast<byte_t*>(_chkpt_table_ptr), CHKPT_TABLE_SIZE);
         _mm_mfence();
@@ -17,6 +18,22 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
     else{
         _chkpt_table_offset = 0 + ALLOC_TABLE_SIZE;
         _chkpt_table_ptr = reinterpret_cast<off64_t*>(_pool.get_obj(_chkpt_table_offset));
+        // check if it's a valid chksystem, if fails, reopen the pool to init it
+        if (_chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] != 0xdeadbeef) {
+            // 要什么优雅，我服了，我把他复制一坨不就完了吗。。。
+            std::cerr << "Invalid partition: Incorrect Magic Number" << std::endl;
+            _pool.close_pmem();
+            _pool.open_pmem(dev_name, map_size, true, use_dram);
+            auto ret = _pool.alloc(CHKPT_TABLE_SIZE);
+            _chkpt_table_offset = ret.first;
+            _chkpt_table_ptr = reinterpret_cast<off64_t*>(ret.second);
+            _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = 0xdeadbeef;
+            _mm_mfence();
+            memset(_chkpt_table_ptr, 0, CHKPT_TABLE_SIZE);
+            _mm_mfence();
+            clwb(reinterpret_cast<byte_t*>(_chkpt_table_ptr), CHKPT_TABLE_SIZE);
+            _mm_mfence();
+        }
     }
     _n_chkpts = _chkpt_table_ptr[0];
     if (_n_chkpts != 0){

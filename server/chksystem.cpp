@@ -105,10 +105,10 @@ CheckpointSystem::remove_chkpt(std::string chkpt_name) {
     _mm_mfence();
     // mark the left-most bit on PMEM to be 1 -> invalidate
     _chkpt_table_ptr[table_idx] = (_chkpt_table_ptr[table_idx] | ((size_t)1 << 63) );
-    // decrease chkpt count
-    _n_chkpts--;
+    // maybe we donot need to decrease chkpt count
+    // _n_chkpts--;
     // _chkpt_table_ptr[0] = _n_chkpts;
-    __sync_bool_compare_and_swap(&_chkpt_table_ptr[0], _n_chkpts + 1, _n_chkpts);
+    // __sync_bool_compare_and_swap(&_chkpt_table_ptr[0], _n_chkpts + 1, _n_chkpts);
     _mm_mfence();
     _mm_clwb(&_chkpt_table_ptr[table_idx]);
     _mm_mfence();

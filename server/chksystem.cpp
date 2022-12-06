@@ -27,9 +27,9 @@ CheckpointSystem::CheckpointSystem(std::string dev_name, size_t map_size, bool i
             auto ret = _pool.alloc(CHKPT_TABLE_SIZE);
             _chkpt_table_offset = ret.first;
             _chkpt_table_ptr = reinterpret_cast<off64_t*>(ret.second);
-            _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = 0xdeadbeef;
             _mm_mfence();
             memset(_chkpt_table_ptr, 0, CHKPT_TABLE_SIZE);
+            _chkpt_table_ptr[CHKPT_TABLE_SIZE/sizeof(off64_t) - 1] = 0xdeadbeef;
             _mm_mfence();
             clwb(reinterpret_cast<byte_t*>(_chkpt_table_ptr), CHKPT_TABLE_SIZE);
             _mm_mfence();

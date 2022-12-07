@@ -11,7 +11,8 @@ Portus is designed for distributed DNN training scenarios, enabling users to do 
 ## Installation
 - **Client** is a pytorch extension running on GPU node, which can be installed using the following command
   ```cd client && python setup.py install```
-  
+
+
 - **Server** is a daemon program running on storage server with persistent memory, which can be built&installed by CMake:
   ```mkdir build && cd build && cmake .. && make -j```
 

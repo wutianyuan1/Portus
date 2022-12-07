@@ -67,6 +67,11 @@ CheckpointSystem::~CheckpointSystem(){
 }
 
 
+/**
+ * @param chkpt_name name of model checkpoint to create
+ * @param nlayers number of layers in this DNN model
+ * @return 0 for succes, non-zero return value indicates an error
+ */
 int
 CheckpointSystem::new_chkpt(std::string chkpt_name, size_t nlayers) {
     if (_chkpts.find(chkpt_name) != _chkpts.end()) {

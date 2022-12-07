@@ -1,3 +1,8 @@
+/**
+ * @file checkpoint.h
+ * @brief Portus client checkpoint&restore interface
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include "../common/utils.h"
 #include "raw_tensor.h"

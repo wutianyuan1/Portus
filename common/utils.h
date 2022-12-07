@@ -1,5 +1,9 @@
 #pragma once
-
+/**
+ * @file utils.h
+ * @brief common Portus utils
+ * @author madoka, stevelee477
+*/
 #ifdef __cplusplus
 extern "C" {
 #endif

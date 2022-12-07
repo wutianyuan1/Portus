@@ -1,3 +1,8 @@
+/**
+ * @file pool.h
+ * @brief Persistent memory pool allocator
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include "common.h"
 

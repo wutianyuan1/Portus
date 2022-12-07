@@ -1,3 +1,8 @@
+/**
+ * @file tpool.h
+ * @brief thread pool for Portus server
+ * @author madoka, stevelee477
+ */
 #pragma once
 
 #include <vector>

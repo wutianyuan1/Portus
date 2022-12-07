@@ -1,3 +1,8 @@
+/**
+ * @file mserver.cpp
+ * @brief Multi-tenant server daemon
+ * @author madoka, stevelee477
+ */
 #include "common.h"
 #include "chksystem.h"
 #include "argparse.h"

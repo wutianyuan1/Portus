@@ -1,3 +1,8 @@
+/**
+ * @file rpmactl.cpp
+ * @brief management command line interface (CLI) for Portus server
+ * @author madoka, stevelee477
+ */
 #include "chksystem.h"
 #ifdef USE_HDF5
 #include <H5Cpp.h>

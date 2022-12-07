@@ -3,3 +3,5 @@ dist/
 *.egg-info
 .vscode
 node_modules
+html
+latex

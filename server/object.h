@@ -1,3 +1,8 @@
+/**
+ * @file object.h
+ * @brief Portus Object Store
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include "common.h"
 #include "pool.h"

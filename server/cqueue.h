@@ -1,3 +1,8 @@
+/**
+ * @file cqueue.h
+ * @brief Concurrent Job Queue for serving jobs
+ * @author madoka, stevelee477
+ */
 #pragma once
 
 #include <queue>

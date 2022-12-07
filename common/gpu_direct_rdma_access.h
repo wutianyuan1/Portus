@@ -1,4 +1,7 @@
-/*
+/**
+ * @file gpu_direct_rdma_access.h
+ * @brief low-level RDMA communaction supports of Portus communaction
+ * @author Mellanox Technologies, Inc.
  * Copyright (c) 2019 Mellanox Technologies, Inc.  All rights reserved.
  *
  * This software is available to you under a choice of one of two

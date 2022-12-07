@@ -1,3 +1,8 @@
+/**
+ * @file raw_tensor.h
+ * @brief Portus client wrap of PyTorch tensors
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include <map>
 #include <iostream>

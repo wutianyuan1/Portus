@@ -1,3 +1,8 @@
+/**
+ * @file rdma_wrap.h
+ * @brief Portus client RDMA communacation protocols
+ * @author madoka, stevelee477
+ */
 #pragma once
 
 #include <string>

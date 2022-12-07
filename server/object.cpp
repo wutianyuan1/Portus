@@ -1,3 +1,8 @@
+/**
+ * @file object.h
+ * @brief Implementation of Portus Object Store
+ * @author madoka, stevelee477
+ */
 #include "object.h"
 
 

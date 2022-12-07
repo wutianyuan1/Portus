@@ -1,3 +1,8 @@
+/**
+ * @file khash.h
+ * @brief Hash function supports for Portus memory region keys
+ * @author Attractive Chaos
+*/
 /* The MIT License
 
    Copyright (c) 2008, 2009, 2011 by Attractive Chaos <attractor@live.co.uk>

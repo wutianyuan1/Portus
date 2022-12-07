@@ -1,3 +1,8 @@
+/**
+ * @file checkpointserver.cpp
+ * @brief Implementation of Portus checkpointing server
+ * @author madoka, stevelee477
+ */
 #include "checkpointserver.h"
 
 CheckpointServer::CheckpointServer(std::string host, int sockfd, std::shared_ptr<CheckpointSystem> chksystem)

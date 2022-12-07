@@ -1,3 +1,8 @@
+/**
+ * @file chksystem.h
+ * @brief Portus checkpointing system
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include "common.h"
 #include "object.h"

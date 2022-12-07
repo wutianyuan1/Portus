@@ -1,3 +1,8 @@
+/**
+ * @file argparse.h
+ * @brief Portus argument parser
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include <getopt.h>
 #include "common.h"

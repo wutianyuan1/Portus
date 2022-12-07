@@ -1,3 +1,8 @@
+/**
+ * @file checkpointserver.h
+ * @brief Portus checkpointing server
+ * @author madoka, stevelee477
+ */
 #pragma once
 
 #include "common.h"

@@ -1,3 +1,8 @@
+/**
+ * @file pool.h
+ * @brief Implementation of persistent memory pool allocator
+ * @author madoka, stevelee477
+ */
 #include "pool.h"
 
 

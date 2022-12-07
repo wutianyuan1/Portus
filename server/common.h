@@ -1,3 +1,8 @@
+/**
+ * @file common.h
+ * @brief All used C/C++ STL&Unix headers
+ * @author madoka, stevelee477
+ */
 #pragma once
 #include <iostream>
 #include <cstdlib>

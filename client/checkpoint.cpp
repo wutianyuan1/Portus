@@ -1,3 +1,8 @@
+/**
+ * @file checkpoint.cpp
+ * @brief Implementation of Portus client checkpoint&restore interface
+ * @author madoka, stevelee477
+ */
 #include "checkpoint.h"
 #include "../common/gpu_direct_rdma_access.h"
 #include "raw_tensor.h"

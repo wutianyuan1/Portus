@@ -1,3 +1,8 @@
+/**
+ * @file raw_tensor.cpp
+ * @brief Implementation of Portus tensor wrapper
+ * @author madoka, stevelee477
+ */
 #include "raw_tensor.h"
 
 // The "raw" view of NN parameters, where key is layer name, value is

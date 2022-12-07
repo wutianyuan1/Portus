@@ -1,3 +1,8 @@
+/**
+ * @file utils.c
+ * @brief Implementation of common Portus utils
+ * @author madoka, stevelee477
+*/
 /*
  * Copyright (c) 2019 Mellanox Technologies, Inc.  All rights reserved.
  *

@@ -1,3 +1,8 @@
+##
+# @file rdma_wrap.cpp
+# @brief Implementation of Portus client RDMA communacation protocols
+# @author madoka, stevelee477
+
 from setuptools import setup
 from torch.utils import cpp_extension
 import os
